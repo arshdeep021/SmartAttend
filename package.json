@@ -1,0 +1,16 @@
+{
+  "name": "smartattend-v2",
+  "version": "2.0.0",
+  "description": "SmartAttend v2 - Next-Gen Smart Attendance Management System",
+  "scripts": {
+    "dev": "concurrently -k -n \"server,client\" -c \"cyan,magenta\" \"npm.cmd run dev --prefix server\" \"npm.cmd run dev --prefix client\"",
+    "dev:server": "npm.cmd run dev --prefix server",
+    "dev:client": "npm.cmd run dev --prefix client",
+    "seed": "npm.cmd run seed --prefix server",
+    "test": "npm.cmd test --prefix server",
+    "build": "npm.cmd run build --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
