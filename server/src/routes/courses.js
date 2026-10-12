@@ -371,4 +371,49 @@ router.delete('/:id/enroll/:studentId', authorize('teacher', 'admin'), async (re
   }
 });
 
+// POST /api/courses/join - Student self-enrolls using course code (if enabled in settings)
+router.post('/join', authorize('student'), async (req, res, next) => {
+  try {
+    const { courseCode } = req.body;
+    if (!courseCode?.trim()) {
+      return res.status(400).json({ success: false, message: 'Course code is required.' });
+    }
+
+    const settings = await SystemSetting.findOne({ key: 'global_config' });
+    if (settings && settings.allowStudentSelfEnrollment === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'Student self-enrollment is currently disabled by administrator settings.',
+      });
+    }
+
+    const cleanCode = courseCode.trim().toUpperCase();
+    const course = await Course.findOne({ code: cleanCode });
+    if (!course) {
+      return res.status(404).json({ success: false, message: `Course with code "${cleanCode}" not found.` });
+    }
+
+    const existing = await Enrollment.findOne({ course: course._id, student: req.user._id });
+    if (existing) {
+      return res.status(409).json({ success: false, message: `You are already enrolled in ${course.name} (${course.code}).` });
+    }
+
+    const enrollment = await Enrollment.create({
+      course: course._id,
+      student: req.user._id,
+      enrolledAt: new Date(),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Enrolled in ${course.name} (${course.code}) successfully!`,
+      course,
+      enrollment,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
+

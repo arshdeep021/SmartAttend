@@ -13,8 +13,11 @@ import {
   Sparkles,
   MapPin,
   RefreshCw,
+  X,
+  Plus,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import toast from 'react-hot-toast';
 import { api } from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import ProgressRing from '../../components/ProgressRing.jsx';
@@ -28,6 +31,26 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showLowAttendanceModal, setShowLowAttendanceModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCourseCode, setJoinCourseCode] = useState('');
+  const [joining, setJoining] = useState(false);
+
+  const handleJoinCourse = async (e) => {
+    e.preventDefault();
+    if (!joinCourseCode.trim()) return;
+    setJoining(true);
+    try {
+      const res = await api.post('/courses/join', { courseCode: joinCourseCode.trim() });
+      toast.success(res.message);
+      setJoinCourseCode('');
+      setShowJoinModal(false);
+      fetchStats();
+    } catch (err) {
+      toast.error(err.message || 'Failed to join course.');
+    } finally {
+      setJoining(false);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -287,14 +310,39 @@ export default function StudentDashboard() {
 
       {/* Per-Course Breakdown Cards */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-          Course Eligibility & Progress Cards
-        </h2>
-        <p className="text-xs text-slate-400 mb-6">
-          Detailed breakdown with classes needed to recover or safe margin to miss
-        </p>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Course Eligibility & Progress Cards
+            </h2>
+            <p className="text-xs text-slate-400">
+              Detailed breakdown with classes needed to recover or safe margin to miss
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <button
+            onClick={() => setShowJoinModal(true)}
+            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 hover:bg-brand-500/20 transition-all flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Join Course by Code</span>
+          </button>
+        </div>
+
+        {courses.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
+            <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50 text-brand-500" />
+            <p className="font-semibold text-slate-700 dark:text-slate-300">You are not enrolled in any courses yet.</p>
+            <p className="text-[11px] mt-1 mb-3">Join a course using the course code provided by your instructor.</p>
+            <button
+              onClick={() => setShowJoinModal(true)}
+              className="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl"
+            >
+              Join Course by Code
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {courses.map((item) => {
             const isAtRisk = item.isAtRisk;
             const isApproaching = item.isApproachingRisk;
@@ -370,7 +418,66 @@ export default function StudentDashboard() {
             );
           })}
         </div>
-      </div>
+      )}
+    </div>
+
+      {/* JOIN COURSE MODAL */}
+      {showJoinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-brand-600" />
+                Join Course
+              </h3>
+              <button
+                onClick={() => setShowJoinModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleJoinCourse} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  Course Code
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={joinCourseCode}
+                  onChange={(e) => setJoinCourseCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. CS301"
+                  autoFocus
+                  className="w-full text-center font-mono font-bold tracking-widest text-lg uppercase py-3 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Enter the course code provided by your instructor to self-enroll.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowJoinModal(false)}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={joining || !joinCourseCode.trim()}
+                  className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold flex items-center gap-1.5"
+                >
+                  {joining && <RefreshCw className="w-4 h-4 animate-spin" />}
+                  <span>Enroll Now</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

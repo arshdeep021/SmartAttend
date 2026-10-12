@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'smartattend_jwt_super_secret_key_v2_2026_xyz987';
+import { getJwtSecret } from '../config/env.js';
 
 /**
  * Authentication middleware verifying Bearer JWT
@@ -18,7 +17,7 @@ export async function authenticate(req, res, next) {
       });
     }
 
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, getJwtSecret());
     const user = await User.findById(payload.id).select('-passwordHash');
 
     if (!user) {
@@ -39,6 +38,7 @@ export async function authenticate(req, res, next) {
     if (user.role === 'teacher' && !user.approved) {
       return res.status(403).json({
         success: false,
+        code: 'PENDING_APPROVAL',
         message: 'Your teacher account is pending administrator approval.',
       });
     }

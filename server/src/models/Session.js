@@ -40,24 +40,15 @@ const sessionSchema = new mongoose.Schema(
       type: String,
       uppercase: true,
       trim: true,
-      required: true,
+      required: false, // Codes are dynamically & deterministically derived per time window
     },
     qrRefreshInterval: {
       type: Number,
-      default: 20, // seconds
+      default: 30, // seconds
     },
     allowManualCode: {
       type: Boolean,
       default: true,
-    },
-    requireLocation: {
-      type: Boolean,
-      default: false,
-    },
-    location: {
-      lat: { type: Number, default: 0 },
-      lng: { type: Number, default: 0 },
-      radiusMeters: { type: Number, default: 100 },
     },
   },
   { timestamps: true }
@@ -67,6 +58,5 @@ const sessionSchema = new mongoose.Schema(
 sessionSchema.index({ course: 1, createdAt: -1 });
 sessionSchema.index({ teacher: 1, createdAt: -1 });
 sessionSchema.index({ status: 1, endTime: 1 });
-sessionSchema.index({ code: 1 });
 
 export default mongoose.model('Session', sessionSchema);

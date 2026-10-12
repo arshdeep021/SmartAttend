@@ -28,6 +28,30 @@ async function seed() {
   await mongoose.connect(MONGODB_URI);
   console.log('Connected to MongoDB.');
 
+  const isForce = process.argv.includes('--force');
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (isProd && !isForce) {
+    console.error('\n❌ CRITICAL: Refusing to run database seed in PRODUCTION without explicit --force flag!');
+    console.error('Seeding wipes all collections. To force, run: npm run seed -- --force\n');
+    await mongoose.disconnect();
+    process.exit(1);
+  }
+
+  const existingCount = await User.countDocuments();
+  if (existingCount > 0 && !isForce) {
+    console.warn('\n⚠️  SAFETY WARNING: The database already contains', existingCount, 'user records!');
+    console.warn('⚠️  Running seed will permanently destroy all existing users, courses, and attendance logs.');
+    console.warn('⚠️  To confirm wipe and reseed, run with the --force flag:');
+    console.warn('    npm run seed -- --force\n');
+    await mongoose.disconnect();
+    process.exit(0);
+  }
+
+  if (isForce) {
+    console.warn('⚠️  [--force detected] Proceeding to wipe and reinitialize all collections.');
+  }
+
   // Clear existing collections
   await Promise.all([
     User.deleteMany({}),
@@ -338,7 +362,6 @@ async function seed() {
     startTime: new Date(),
     endTime: new Date(Date.now() + 45 * 60 * 1000), // ends in 45 minutes
     status: 'open',
-    code: 'LIVE99',
     allowManualCode: true,
   });
 
@@ -353,7 +376,7 @@ async function seed() {
       status: 'present',
     });
   }
-  console.log('Created 1 currently LIVE active session (Code: LIVE99) for CS301.');
+  console.log('Created 1 currently LIVE active session with dynamic rotating QR for CS301.');
 
   // Create immediate Low Attendance Notifications for the at-risk students
   const atRiskStudentsInfo = [

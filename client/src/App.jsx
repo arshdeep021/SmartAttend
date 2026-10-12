@@ -44,7 +44,8 @@ function ProtectedRoute({ allowedRoles, children }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    const currentPath = window.location.pathname + window.location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(currentPath)}`} replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
@@ -81,6 +82,18 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Direct Camera / Deep Link Scan Route */}
+        <Route
+          path="/scan"
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Layout>
+                <StudentScan />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Student Portal */}
         <Route

@@ -1,187 +1,191 @@
 # 🎓 SmartAttend v2 - Next-Gen Smart Student Attendance Platform
 
-> **Production-Quality Intelligent Attendance System with Cryptographically Signed Rotating QR Codes, Live Projected Sessions, Automated 75% Low Attendance Alert Engine, and Course Roster Eligibility Tracking.**
+> **Hardened, Production-Ready Intelligent Attendance System featuring Cryptographically Synchronized Rotating QR Codes & 6-Character PINs, Server-Side Time-Windows, Single-Origin SPA Serving, Automated 75% Low Attendance Alert Engine, and Course Roster Tracking.**
 
-Built with **React 18 + Vite, Tailwind CSS, Framer Motion, Node.js 20, Express, MongoDB (Mongoose), JWT, and Web APIs**.
-
----
-
-## 🌟 Key Highlights & Architectural Improvements over v1
-
-1. **Course Roster & True Percentage Calculations**:
-   - Unlike basic versions that merely store loose session counts, SmartAttend v2 enforces relational integrity through `Course` and `Enrollment` models.
-   - Calculates exact attendance: $\text{Attendance \%} = \frac{\text{Attended Sessions}}{\text{Total Sessions Conducted}} \times 100$.
-2. **Unmissable 75% Low Attendance Alert System**:
-   - Immediate red animated warning banner pinned to the top of the dashboard.
-   - High-impact modal popup upon student login if any course or overall attendance falls below 75%.
-   - Notification bell badges with live unread indicators.
-   - Dynamic mathematical recovery calculations: accurately computes the exact number of consecutive classes required to recover to 75% ($\lceil \frac{0.75 T - A}{0.25} \rceil$).
-   - Amber "approaching threshold" alerts for students between 75% and 80%.
-3. **Rotating Signed QR Tokens & Anti-Proxy Architecture**:
-   - Live projector screen generates JWT-signed tokens signed with `QR_SECRET` that rotate every 20 seconds with a 30-second expiry and cryptographic nonce.
-   - Prevents screenshot forwards and proxy markings outside the classroom.
-   - Compound unique index on `{ session: 1, student: 1 }` prevents double marking at the database layer with standard 409 Conflict handling.
-4. **Projector-Ready Teacher Screen**:
-   - Full-screen high-contrast view with animated SVG countdown ring.
-   - Real-time check-in stream polling every 3 seconds with animated entrances.
-   - Fallback manual 6-character session PIN displayed for students with camera hardware limitations.
-   - In-session teacher controls: Pause/Resume QR rotation, Extend Time (+5m), Manual Mark, and Undo Mark.
-5. **Admin Governance & Compliance**:
-   - Mandatory admin approval workflow for faculty accounts before login is permitted.
-   - Global system configuration (customizable threshold, QR refresh timing, late mark grace window).
-   - Immutable security audit logs recording manual edits, logins, and approvals.
+Built with **React 18 + Vite, Tailwind CSS, Framer Motion, Node.js 20, Express, MongoDB Atlas (Mongoose), and Web APIs**.
 
 ---
 
-## 🚀 Quick Start Guide
+## 🌟 Key Highlights & Architectural Guarantees
+
+1. **Synchronized QR Code & 6-Character Session PIN Rotation**:
+   - Single source of truth driven by server-side discrete time windows: $\text{windowIndex} = \lfloor \frac{\text{Date.now()}}{\text{interval} \times 1000} \rfloor$.
+   - Derives BOTH the QR payload and the manual 6-character PIN deterministically using HMAC-SHA256 with an unambiguous alphabet (`23456789ABCDEFGHJKLMNPQRSTUVWXYZ`, excluding confusing digits `0, O, 1, I`).
+   - Server response: `{ code, qrPayload, windowStart, expiresAt, serverTime, intervalSeconds }`. Nothing stored per window in the database (zero DB bloat).
+   - Atomic React state updates prevent QR and PIN from ever falling out of sync.
+   - Server clock-offset scheduling `(serverTime - Date.now())` eliminates client-side clock drift.
+   - Validation accepts the current window and at most ONE previous grace window (for network latency), while rejecting older codes.
+
+2. **Reliable Camera Scanning (< 100 Chars)**:
+   - Replaced heavy 350-character JWTs with compact URLs under 100 characters: `https://<domain>/scan?s=<sessionId>&c=<code>`.
+   - Students can scan directly with their native phone camera app! Unauthenticated scans smoothly route to `/login?redirect=...` and automatically mark attendance upon authentication.
+   - Projector display renders QR with level `M`, 320px SVG, 4-module quiet zone, and high contrast.
+   - Built-in scanner modal defaults to the rear environment camera (`facingMode: 'environment'`), dynamic 75% qrbox, and native BarcodeDetector API acceleration.
+
+3. **User Management & Database Persistence**:
+   - Full Admin CRUD modal for adding students and faculty with instant approval (`approved: true`) and immediate course enrollment.
+   - Student self-enrollment modal using course codes (`POST /api/courses/join`), toggleable in System Settings.
+   - ReDoS-safe user searching with regex character escaping.
+   - Safe seeding script (`npm run seed`) guarded against accidental execution in production and requiring `--force` if records exist.
+   - Production connection resiliency with 5-attempt exponential backoff for MongoDB Atlas.
+
+4. **Production Architecture & Hardening**:
+   - **Unified Single-Origin Service**: Express statically serves the compiled Vite client (`client/dist`) with an SPA catch-all fallback (`* -> index.html`), eliminating cross-origin CORS barriers and multiple hosting costs.
+   - **Reverse-Proxy Ready**: Configured `app.set('trust proxy', 1)` to prevent express-rate-limit IP collisions behind Render/Railway/Fly/Cloudflare.
+   - **NAT-Safe Rate Limiting**: Attendance marking rate limit is keyed per authenticated student user ID (`student_<id>`), preventing entire classroom subnets from being locked out.
+   - **Reduced Attack Surface**: Express payload body size capped at `100kb`.
+   - **Security Headers**: Tightened Helmet CSP supporting cameras, Google Fonts, and inline data-URI icons.
+   - **Strict Boot Secret Validation**: Server fails fast if `JWT_SECRET` or `QR_SECRET` are missing or less than 32 characters in production.
+
+5. **Unmissable 75% Low Attendance Alert Engine**:
+   - Real-time percentage math: $\text{Attendance \%} = \frac{\text{Attended Classes}}{\text{Conducted Classes}} \times 100$.
+   - Recovery math calculates exact consecutive classes needed to return above 75%: $\lceil \frac{0.75 T - A}{0.25} \rceil$.
+   - Calculates safe margin of classes a student can miss without dropping below threshold.
+   - Login alert popup, pinned red dashboard banner, and notifications.
+
+---
+
+## 🚀 Local Development Setup
 
 ### Prerequisites
-- **Node.js**: v18+ or v20+ (tested on Node v20/v24)
-- **MongoDB**: Local MongoDB server on port `27017` or MongoDB Atlas URI
+- **Node.js**: v18+ or v20+ (ESM support required)
+- **MongoDB**: Local MongoDB instance (`mongodb://localhost:27017/smartattend_v2`) or MongoDB Atlas URI
 
-### Installation & Launch in 3 Simple Steps
-
+### Quick Start
 ```bash
-# 1. Navigate to the project root
-cd smartattend-v2
+# 1. Install root, server, and client dependencies
+npm install
 
-# 2. Populate the database with realistic demo data (courses, sessions, at-risk students)
-npm run seed
+# 2. Populate development database with seed data
+npm run seed -- --force
 
-# 3. Launch both the backend server and frontend client concurrently
+# 3. Start both backend (port 5000) and frontend (port 5173) in dev mode
 npm run dev
 ```
 
-The application will be accessible at:
-- **Client Frontend**: `http://localhost:5173`
+Application URLs in Development:
+- **Client Application**: `http://localhost:5173`
 - **Backend API**: `http://localhost:5000`
 - **Health Check**: `http://localhost:5000/api/health`
 
 ---
 
+## 🌐 Production Deployment Guide
+
+SmartAttend v2 is engineered as a unified single-port application. The backend Express server serves both the REST API and the compiled React SPA from `client/dist`.
+
+### Step 1: Provision MongoDB Atlas Cluster (Free M0)
+1. Log in to [MongoDB Atlas](https://www.mongodb.com/atlas).
+2. Create a free **M0 Sandbox** cluster (AWS/GCP/Azure in your closest region).
+3. Under **Security > Database Access**, create a user (e.g. `smartattend_app`) with read/write privileges.
+4. Under **Security > Network Access**, click **Add IP Address** and select **Allow Access from Anywhere** (`0.0.0.0/0`) so dynamic cloud hosts can connect.
+5. In **Database > Connect**, copy your connection string:
+   ```
+   mongodb+srv://smartattend_app:<PASSWORD>@cluster0.abcde.mongodb.net/smartattend_v2?retryWrites=true&w=majority
+   ```
+
+### Step 2: Deploy to Render.com (Recommended Free/Low-Cost Host)
+1. Push your repository to GitHub or GitLab.
+2. Sign in to [Render.com](https://render.com) and click **New + > Web Service**.
+3. Connect your repository and configure the service:
+   - **Name**: `smartattend-v2`
+   - **Region**: Closest to your users
+   - **Branch**: `main`
+   - **Runtime**: `Node`
+   - **Build Command**: `npm run build` (runs `npm run build --prefix client`)
+   - **Start Command**: `npm start` (runs `node server/src/index.js`)
+   - **Instance Type**: `Free` or `Starter`
+4. Add the following **Environment Variables** in the Render Dashboard:
+
+| Key | Example Value | Description |
+| :--- | :--- | :--- |
+| `NODE_ENV` | `production` | Enables production optimizations & strict secret checking |
+| `PORT` | `10000` | Port automatically set by Render |
+| `MONGODB_URI` | `mongodb+srv://...` | MongoDB Atlas connection string from Step 1 |
+| `JWT_SECRET` | *(64-char hex)* | Generate via `node -e "console.log(crypto.randomBytes(32).toString('hex'))"` |
+| `QR_SECRET` | *(64-char hex)* | Generate via `node -e "console.log(crypto.randomBytes(32).toString('hex'))"` |
+| `CLIENT_URL` | `https://smartattend.onrender.com` | Your public domain (or custom domain) |
+| `QR_ROTATION_INTERVAL_SECONDS` | `30` | Time window for QR & PIN rotation (default 30) |
+
+5. Under **Settings > Health Check Path**, set:
+   ```
+   /api/health
+   ```
+6. Click **Create Web Service**. Render will install dependencies, build the React bundle to `client/dist`, start Node, and verify healthy database connectivity.
+
+### Step 3: Custom Domain & SSL/TLS Setup
+1. In Render, navigate to **Settings > Custom Domains** and add your domain (e.g. `attend.yourinstitution.edu`).
+2. In your DNS provider (Cloudflare, Namecheap, GoDaddy):
+   - For apex domain (`yourinstitution.edu`): Add an `ANAME` or `ALIAS` pointing to Render's DNS target.
+   - For subdomain (`attend.yourinstitution.edu`): Add a `CNAME` pointing to Render's DNS target.
+3. Render automatically issues and renews a free Let's Encrypt SSL/TLS certificate.
+4. Update `CLIENT_URL` in your environment variables to match `https://attend.yourinstitution.edu`.
+
+---
+
 ## 🔑 Demo Accounts for Evaluation
 
-All demo accounts are pre-seeded and ready for immediate testing:
-
-| Role | Email | Password | Notable Characteristics |
+| Role | Email | Password | Features / Test Scenario |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin@smartattend.edu` | `Admin@123` | Institutional dashboard, teacher approvals, system settings, audit logs |
-| **Faculty (Approved)** | `dr.sharma@smartattend.edu` | `Teacher@123` | Teaches CS301, CS303, CS305. Can start live QR sessions & view rosters |
-| **Faculty (Approved)** | `prof.patel@smartattend.edu` | `Teacher@123` | Teaches CS302 (DBMS) & CS304 (Networks). |
-| **Faculty (Pending Approval)** | `dr.sen@smartattend.edu` | `Teacher@123` | **Pending Approval**. Test the admin approval queue by reviewing this account! |
-| **Student (< 75% Alert)** | `kabir.mehta@smartattend.edu` | `Student@123` | **33.3% in CS301**. Immediate red warning banner, login modal & bell badge |
-| **Student (< 75% Alert)** | `ananya.iyer@smartattend.edu` | `Student@123` | **50.0% in CS302**. Low attendance warning banner |
-| **Student (< 75% Alert)** | `rohan.gupta@smartattend.edu` | `Student@123` | **58.3% in CS303**. Low attendance warning banner |
-| **Student (< 75% Alert)** | `pooja.nair@smartattend.edu` | `Student@123` | **66.7% in CS304**. Low attendance warning banner |
-| **Student (Good Standing)** | `aravind.swamy@smartattend.edu` | `Student@123` | **~90% Overall**. Green circular progress ring |
+| **Administrator** | `admin@smartattend.edu` | `Admin@123` | Institutional dashboard, User Management CRUD modal, System Settings, Audit logs |
+| **Faculty (Approved)** | `dr.sharma@smartattend.edu` | `Teacher@123` | Teaches CS301, CS303, CS305. Can start live QR projector sessions & manage rosters |
+| **Faculty (Pending Approval)** | `dr.sen@smartattend.edu` | `Teacher@123` | Test the admin approval queue by approving this account |
+| **Student (< 75% Alert)** | `kabir.mehta@smartattend.edu` | `Student@123` | **33.3% in CS301**. Red alert banner, login modal, consecutive class recovery count |
+| **Student (Good Standing)** | `aravind.swamy@smartattend.edu` | `Student@123` | **~90% Overall**. Safe classes margin calculation |
 
-> 💡 **Tip:** On the Sign In page (`/login`), click any of the **1-Click Demo Fill** buttons to automatically fill credentials.
-
----
-
-## 🛠️ Tech Stack & Directory Structure
-
-```
-smartattend-v2/
-├── package.json              # Orchestrates concurrently dev, seed, and tests
-├── README.md                 # Full documentation and evaluation guide
-├── server/
-│   ├── package.json
-│   ├── .env.example
-│   ├── src/
-│   │   ├── config/db.js      # Mongoose connection
-│   │   ├── models/           # User, Course, Enrollment, Session, Attendance, Notification, SystemSetting, AuditLog
-│   │   ├── middleware/       # JWT auth, RBAC authorize, express-rate-limit, errorHandler
-│   │   ├── utils/            # Attendance math formulas, rotating QR JWT token signer/verifier, mailer
-│   │   ├── routes/           # auth, courses, sessions, attendance, notifications, admin
-│   │   ├── seed/seed.js      # Comprehensive demo database generator
-│   │   └── index.js          # Express app entry point
-│   └── tests/
-│       └── attendance.test.js # Automated test suite for critical business logic
-└── client/
-    ├── package.json
-    ├── vite.config.js        # React plugin + /api proxy
-    ├── tailwind.config.js    # Custom indigo/teal palette & animation keyframes
-    ├── index.html
-    └── src/
-        ├── api/client.js     # Centralized fetch client with bearer token injection
-        ├── context/          # AuthContext, ThemeContext, NotificationContext
-        ├── components/       # ProgressRing, LowAttendanceBanner, LowAttendanceModal, QRScannerModal, Navbar, Sidebar
-        ├── pages/
-        │   ├── landing/      # SaaS Landing Page
-        │   ├── auth/         # Login, Register, ForgotPassword, ResetPassword
-        │   ├── student/      # StudentDashboard, StudentScan, AttendanceHistory, Timetable, NotificationsPage, ProfilePage
-        │   ├── teacher/      # TeacherDashboard, LiveSessionQR, CoursesManager, TeacherReports
-        │   └── admin/        # AdminDashboard, TeacherApprovals, UsersManager, SystemSettings, AuditLogsViewer
-        ├── App.jsx           # Protected routes per role & toast notifications
-        └── main.jsx
-```
-
----
-
-## 🛡️ Anti-Proxy Security Analysis & Honest Disclosures
-
-SmartAttend v2 incorporates defensive layers designed to deter common classroom attendance fraud:
-
-1. **Short-Lived Signed QR Tokens (20s Refresh, 30s Expiry)**:
-   - Each rotating QR code is signed with HMAC/SHA-256 using a server secret (`QR_SECRET`), containing session ID, room code, and a random cryptographic nonce.
-   - Screenshots messaged across chat apps will expire before a remote student can scan them.
-2. **Compound Unique Database Constraint**:
-   - `attendanceSchema.index({ session: 1, student: 1 }, { unique: true })` ensures that double markings are structurally impossible at the database layer.
-3. **Course Enrollment Verification**:
-   - Only students actively enrolled in the course roster can record attendance for a session.
-4. **Audit Trail on Manual Edits**:
-   - Any manual mark or status edit by faculty is logged with an mandatory audit reason note and client IP address.
-
-> ⚠️ **Honest Disclosure on Proxy Attendance**:
-> While rotating QR codes and device checks drastically reduce casual proxy attendance compared to static QR codes or roll calls, no software-only system can 100% eliminate a situation where a student physically present in the room logs in with their absent peer's account credentials or shares an instant screen stream. For mission-critical high-stakes exams, software checks should be paired with room proctor supervision.
+*Tip: Quick-fill buttons are available on the Sign In page (`/login`) for evaluation.*
 
 ---
 
 ## 🧪 Automated Testing
 
-Run the automated test suite verifying attendance mathematical formulas, 75% alert triggers, duplicate mark constraints, and token expiration:
+SmartAttend v2 includes a test suite covering mathematical accuracy, synchronized time-window derivation, grace period validation, duplicate mark constraints, and database persistence:
 
 ```bash
-npm run test
+# Run all automated tests
+npm test
 ```
 
-Test Results Summary:
-- 12/12 test suites passing with 0 failures (`node --test tests/attendance.test.js`).
+Test Results:
+- **25/25 tests passing** (`attendance.test.js` and `e2e_verify.test.js`).
+- Tests run with Node's native test runner (`node --test`).
 
 ---
 
-## 📡 API Reference Overview
+## 📁 Repository Structure
 
-- **Auth**:
-  - `POST /api/auth/register` - Student auto-approved; Teacher requires admin approval
-  - `POST /api/auth/login` - Rate limited; checks active state and approval
-  - `POST /api/auth/forgot-password` - Dispatches recovery link
-  - `POST /api/auth/reset-password` - Resets password with token
-  - `GET /api/auth/me` - Profile session verification
-- **Sessions & QR**:
-  - `POST /api/sessions` - Teacher starts live session
-  - `GET /api/sessions/:id/qr` - Generates short-lived signed rotating QR token
-  - `POST /api/sessions/:id/close` - Closes active session
-  - `POST /api/sessions/:id/extend` - Extends session duration
-  - `GET /api/sessions/:id/attendees` - Real-time attendee stream polling
-  - `POST /api/sessions/:id/manual-mark` - Faculty manual mark with audit log
-  - `DELETE /api/sessions/:id/attendance/:studentId` - Revokes attendance
-- **Attendance**:
-  - `POST /api/attendance/mark` - Mark attendance via scanned QR token or manual PIN
-  - `GET /api/attendance/mine` - Paginated student history with filters
-  - `GET /api/attendance/student-stats` - Dashboard metrics with 75% risk calculations
-  - `GET /api/attendance/export-csv` - Downloads CSV audit export
-- **Courses & Roster**:
-  - `GET /api/courses` - Lists courses with enrollment & attendance stats
-  - `GET /api/courses/:id/roster` - Course roster with student percentage calculations
-  - `POST /api/courses/:id/enroll` - Enroll single student
-  - `POST /api/courses/:id/enroll-bulk` - Bulk CSV student enrollment
-- **Admin**:
-  - `GET /api/admin/pending-teachers` - List faculty awaiting approval
-  - `POST /api/admin/approve-teacher/:id` - Grant faculty portal access
-  - `POST /api/admin/reject-teacher/:id` - Reject faculty registration
-  - `GET /api/admin/users` - Global user directory with activation toggle
-  - `GET /api/admin/settings` & `PUT /api/admin/settings` - Global system settings
-  - `GET /api/admin/audit-logs` - Security audit trail
-  - `GET /api/admin/analytics` - Institutional analytics
+```
+smartattend-v2/
+├── package.json              # Root npm scripts (build, start, dev, seed, test)
+├── .env.example              # Comprehensive environment configuration documentation
+├── README.md                 # System overview and deployment guide
+├── server/
+│   ├── package.json
+│   ├── src/
+│   │   ├── config/           # db.js (Atlas retry), env.js (Strict validation)
+│   │   ├── models/           # User, Course, Enrollment, Session, Attendance, Notification, SystemSetting, AuditLog
+│   │   ├── middleware/       # auth, RBAC, rateLimiter (per student ID), errorHandler (11000 handling)
+│   │   ├── utils/            # qrToken.js (deterministic window index & 6-char derivation)
+│   │   ├── routes/           # auth, courses, sessions, attendance, notifications, admin
+│   │   ├── seed/seed.js      # Safe seed script (protected with --force)
+│   │   └── index.js          # Unified Express server & client/dist static hosting
+│   └── tests/
+│       ├── attendance.test.js # 24 unit and integration tests
+│       └── e2e_verify.test.js # End-to-end restart persistence & attendance flow test
+└── client/
+    ├── package.json
+    ├── vite.config.js        # React plugin + /api proxy
+    ├── tailwind.config.js    # Responsive utility styling
+    └── src/
+        ├── api/client.js     # Centralized fetch client
+        ├── components/       # QRScannerModal, ProgressRing, LowAttendanceBanner, LowAttendanceModal
+        └── pages/
+            ├── student/      # StudentDashboard, StudentScan, AttendanceHistory
+            ├── teacher/      # TeacherDashboard, LiveSessionQR, CoursesManager
+            └── admin/        # AdminDashboard, UsersManager, SystemSettings, AuditLogs
+```
+
+---
+
+## 📄 License & Archival Notice
+- **Legacy v1 (`SmartAttend_Project_new`)**: Deprecated and no longer required. Can be safely archived. All operational, security, and mathematical requirements are implemented in `smartattend-v2`.

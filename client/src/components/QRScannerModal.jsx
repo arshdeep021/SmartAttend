@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,9 +17,10 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
   const [successData, setSuccessData] = useState(null);
 
   const scannerRef = useRef(null);
+  const isStoppingRef = useRef(false);
   const scannerContainerId = 'qr-reader-viewport';
 
-  // Trigger confetti fireworks on success
+  // Trigger celebration confetti
   const triggerConfetti = () => {
     try {
       confetti({
@@ -29,96 +30,35 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
         colors: ['#4f46e5', '#10b981', '#14b8a6', '#f59e0b'],
       });
     } catch (e) {
-      // Confetti fallback
+      // Fallback
     }
   };
 
-  // Discover cameras
-  useEffect(() => {
-    if (isOpen && activeTab === 'camera') {
-      Html5Qrcode.getCameras()
-        .then((devices) => {
-          if (devices && devices.length > 0) {
-            setCameras(devices);
-            // Default to back camera on mobile if present
-            const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
-            setSelectedCameraId(backCam ? backCam.id : devices[0].id);
-          } else {
-            setCameraError('No camera found on this device. Use manual code entry instead.');
-          }
-        })
-        .catch((err) => {
-          setCameraError('Camera access denied or unavailable. Please enable camera permission in your browser or use manual code entry.');
-        });
-    }
-
-    return () => {
-      stopScanner();
-    };
-  }, [isOpen, activeTab]);
-
-  // Start scanner when camera is selected
-  useEffect(() => {
-    if (isOpen && activeTab === 'camera' && selectedCameraId && !successData) {
-      startScanner(selectedCameraId);
-    }
-    return () => {
-      stopScanner();
-    };
-  }, [selectedCameraId, isOpen, activeTab, successData]);
-
-  const startScanner = async (cameraId) => {
-    try {
-      await stopScanner();
-      setCameraError(null);
-      setErrorFeedback(null);
-
-      const html5QrCode = new Html5Qrcode(scannerContainerId);
-      scannerRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        cameraId,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-        },
-        async (decodedText) => {
-          // Scanned successfully!
-          await handleMarkAttendance({ qrToken: decodedText });
-        },
-        () => {
-          // Ignore frame decode failures
-        }
-      );
-      setScanning(true);
-    } catch (err) {
-      setCameraError(err.message || 'Failed to start camera scanner.');
-      setScanning(false);
-    }
-  };
-
-  const stopScanner = async () => {
+  const stopScanner = useCallback(async () => {
+    if (isStoppingRef.current) return;
     if (scannerRef.current) {
+      isStoppingRef.current = true;
       try {
         if (scannerRef.current.isScanning) {
           await scannerRef.current.stop();
         }
         scannerRef.current.clear();
       } catch (e) {
-        // Safe clear
+        // Safe catch on cleanup
+      } finally {
+        scannerRef.current = null;
+        isStoppingRef.current = false;
+        setScanning(false);
       }
-      scannerRef.current = null;
-      setScanning(false);
     }
-  };
+  }, []);
 
-  const handleMarkAttendance = async (payload) => {
+  const handleMarkAttendance = useCallback(async (payload) => {
     if (marking) return;
     setMarking(true);
     setErrorFeedback(null);
 
-    // Stop camera immediately upon reading QR
+    // CRITICAL: Stop camera immediately upon detection
     await stopScanner();
 
     try {
@@ -127,11 +67,122 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
       triggerConfetti();
       if (onSuccess) onSuccess(res);
     } catch (err) {
-      setErrorFeedback(err.message || 'Could not verify attendance.');
+      let friendlyMsg = err.message || 'Could not verify attendance.';
+      if (err.code === 'DUPLICATE_ATTENDANCE' || err.message?.includes('already')) {
+        friendlyMsg = 'Already marked: Your attendance has already been recorded for this session.';
+      } else if (err.code === 'NOT_ENROLLED' || err.message?.includes('not enrolled')) {
+        friendlyMsg = 'Course mismatch: You are not enrolled in this course.';
+      } else if (err.code === 'CODE_EXPIRED' || err.message?.includes('expired')) {
+        friendlyMsg = 'Code expired: The QR code or PIN has expired. Please scan the current refreshed code on the screen.';
+      } else if (err.code === 'SESSION_CLOSED' || err.message?.includes('closed')) {
+        friendlyMsg = 'Session closed: This attendance session has ended.';
+      }
+      setErrorFeedback(friendlyMsg);
     } finally {
       setMarking(false);
     }
-  };
+  }, [marking, stopScanner, onSuccess]);
+
+  const startScanner = useCallback(async (cameraConfig) => {
+    try {
+      await stopScanner();
+      setCameraError(null);
+      setErrorFeedback(null);
+
+      // Check for insecure context (e.g., LAN IP over plain HTTP)
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!window.isSecureContext && !isLocal) {
+        setCameraError('Camera access requires HTTPS. Insecure HTTP connections over LAN or the web block phone cameras. Please access via HTTPS or use manual PIN entry.');
+        return;
+      }
+
+      const html5QrCode = new Html5Qrcode(scannerContainerId, {
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true,
+        },
+      });
+      scannerRef.current = html5QrCode;
+
+      // Compute qrbox as percentage of the viewport
+      const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
+        const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75);
+        return { width: edge, height: edge };
+      };
+
+      await html5QrCode.start(
+        cameraConfig,
+        {
+          fps: 12,
+          qrbox: qrboxFunction,
+          aspectRatio: 1.0,
+        },
+        async (decodedText) => {
+          // Parse scanned payload (handles short URLs like /scan?s=...&c=... or raw tokens)
+          let payload = { qrPayload: decodedText };
+          try {
+            if (decodedText.includes('?s=') || decodedText.includes('&s=') || decodedText.includes('&c=') || decodedText.includes('?c=')) {
+              const url = new URL(decodedText, window.location.origin);
+              const s = url.searchParams.get('s');
+              const c = url.searchParams.get('c');
+              if (s && c) {
+                payload = { sessionId: s, code: c };
+              }
+            }
+          } catch (e) {
+            // Keep default payload
+          }
+
+          await handleMarkAttendance(payload);
+        },
+        () => {
+          // Ignore individual frame decode misses
+        }
+      );
+      setScanning(true);
+    } catch (err) {
+      console.warn('Camera scanner start warning:', err);
+      let msg = err.message || 'Failed to start camera scanner.';
+      if (err.name === 'NotAllowedError' || msg.includes('Permission')) {
+        msg = 'Camera permission denied. Please allow camera access in your browser settings or use manual PIN entry.';
+      } else if (err.name === 'NotFoundError' || msg.includes('No camera')) {
+        msg = 'No camera found on this device. Please use manual session PIN entry.';
+      }
+      setCameraError(msg);
+      setScanning(false);
+    }
+  }, [stopScanner, handleMarkAttendance]);
+
+  // Discover and initialize cameras
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'camera' || successData) {
+      stopScanner();
+      return;
+    }
+
+    // Default to back camera using facingMode: "environment"
+    startScanner({ facingMode: 'environment' });
+
+    // Also populate camera device list if available
+    Html5Qrcode.getCameras()
+      .then((devices) => {
+        if (devices && devices.length > 0) {
+          setCameras(devices);
+          const backCam = devices.find(d =>
+            d.label.toLowerCase().includes('back') ||
+            d.label.toLowerCase().includes('environment') ||
+            d.label.toLowerCase().includes('rear')
+          );
+          setSelectedCameraId(backCam ? backCam.id : devices[0].id);
+        }
+      })
+      .catch(() => {
+        // If device enumeration is blocked, facingMode environment already attempted above
+      });
+
+    return () => {
+      stopScanner();
+    };
+  }, [isOpen, activeTab, successData, startScanner, stopScanner]);
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
@@ -143,8 +194,8 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
     setSuccessData(null);
     setErrorFeedback(null);
     setManualCode('');
-    if (activeTab === 'camera' && selectedCameraId) {
-      startScanner(selectedCameraId);
+    if (activeTab === 'camera') {
+      startScanner(selectedCameraId ? selectedCameraId : { facingMode: 'environment' });
     }
   };
 
@@ -169,7 +220,7 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
                 Mark Live Attendance
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Scan teacher's projector QR or enter session code
+                Scan teacher's projector QR or enter rotating PIN
               </p>
             </div>
           </div>
@@ -214,7 +265,7 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
               }`}
             >
               <KeyRound className="w-4 h-4" />
-              Manual Session Code
+              Manual 6-Char PIN
             </button>
           </div>
         )}
@@ -241,7 +292,7 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
                 {successData.record?.courseName} ({successData.record?.courseCode})
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                Topic: {successData.record?.sessionTopic} • {new Date(successData.record?.markedAt).toLocaleTimeString()}
+                Topic: {successData.record?.sessionTopic} &bull; {new Date(successData.record?.markedAt).toLocaleTimeString()}
               </p>
 
               {successData.metrics && (
@@ -278,9 +329,9 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
                     <p className="font-semibold">{errorFeedback}</p>
                     <button
                       onClick={handleResetAndScanAgain}
-                      className="mt-1 text-xs font-bold underline hover:text-red-800 dark:hover:text-red-200"
+                      className="mt-1.5 text-xs font-bold underline hover:text-red-800 dark:hover:text-red-200 block"
                     >
-                      Try Again
+                      Scan Again
                     </button>
                   </div>
                 </div>
@@ -297,22 +348,17 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
                         onClick={() => setActiveTab('manual')}
                         className="px-4 py-2 text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/60 dark:text-brand-300 rounded-xl"
                       >
-                        Switch to Manual Code Entry
+                        Switch to Manual PIN Entry
                       </button>
                     </div>
                   ) : (
                     <div>
-                      {/* Camera Viewport with Futuristic Laser Sweep */}
+                      {/* Camera Viewport with Futuristic Corner Frames */}
                       <div className="relative overflow-hidden rounded-2xl bg-black aspect-square flex items-center justify-center border-2 border-brand-500/30">
                         <div id={scannerContainerId} className="w-full h-full" />
 
-                        {/* Animated Laser Sweep Line */}
-                        {scanning && (
-                          <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#34d399] animate-laser-sweep pointer-events-none" />
-                        )}
-
-                        {/* Crosshair corners */}
-                        <div className="absolute inset-8 border border-white/20 rounded-xl pointer-events-none flex flex-col justify-between">
+                        {/* Scanner crosshair overlay */}
+                        <div className="absolute inset-10 border border-white/20 rounded-xl pointer-events-none flex flex-col justify-between">
                           <div className="flex justify-between">
                             <span className="w-4 h-4 border-t-2 border-l-2 border-brand-400" />
                             <span className="w-4 h-4 border-t-2 border-r-2 border-brand-400" />
@@ -324,20 +370,23 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
                         </div>
 
                         {marking && (
-                          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
                             <RefreshCw className="w-8 h-8 animate-spin text-brand-400 mb-2" />
-                            <span className="text-xs font-semibold">Verifying rotating token...</span>
+                            <span className="text-xs font-semibold">Verifying attendance code...</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Camera Switcher */}
+                      {/* Camera Switcher if multiple detected */}
                       {cameras.length > 1 && (
                         <div className="mt-3 flex items-center justify-between text-xs">
                           <span className="text-slate-500 dark:text-slate-400">Camera Source:</span>
                           <select
                             value={selectedCameraId}
-                            onChange={(e) => setSelectedCameraId(e.target.value)}
+                            onChange={(e) => {
+                              setSelectedCameraId(e.target.value);
+                              startScanner(e.target.value);
+                            }}
                             className="text-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1"
                           >
                             {cameras.map((c) => (
@@ -358,7 +407,7 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
                 <form onSubmit={handleManualSubmit} className="space-y-4">
                   <div className="text-center py-2">
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      If camera is unavailable, enter the 6-character session PIN displayed on the teacher's screen:
+                      Enter the 6-character PIN displayed on the teacher's projector screen:
                     </p>
                   </div>
 
@@ -368,7 +417,7 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
                       maxLength={6}
                       value={manualCode}
                       onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. LIVE99"
+                      placeholder="e.g. 7X9K2M"
                       autoFocus
                       className="w-full text-center tracking-[0.4em] font-mono font-extrabold text-2xl uppercase py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/20 text-slate-900 dark:text-white"
                     />
@@ -376,18 +425,18 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }) {
 
                   <button
                     type="submit"
-                    disabled={marking || manualCode.trim().length < 4}
+                    disabled={marking || manualCode.trim().length !== 6}
                     className="w-full py-3 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all rounded-xl shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2"
                   >
                     {marking ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        Submitting...
+                        Verifying...
                       </>
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4" />
-                        Verify Attendance
+                        Verify Attendance PIN
                       </>
                     )}
                   </button>

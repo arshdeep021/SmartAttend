@@ -13,6 +13,11 @@ import { calculateAttendanceMetrics } from '../utils/attendanceCalculator.js';
 const router = Router();
 router.use(authenticate, authorize('admin'));
 
+// Helper to escape regex special characters (prevents ReDoS attacks)
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // GET /api/admin/pending-teachers - Get teachers awaiting approval
 router.get('/pending-teachers', async (req, res, next) => {
   try {
@@ -85,18 +90,27 @@ router.post('/reject-teacher/:id', async (req, res, next) => {
   }
 });
 
-// GET /api/admin/users - User directory with filters and search
+// GET /api/admin/users - User directory with filters, search, and not-enrolled filter
 router.get('/users', async (req, res, next) => {
   try {
-    const { role, search, page = 1, limit = 20 } = req.query;
+    const { role, search, notEnrolledOnly, page = 1, limit = 20 } = req.query;
     const filter = {};
 
     if (role && ['student', 'teacher', 'admin'].includes(role)) {
       filter.role = role;
     }
 
-    if (search) {
-      const regex = new RegExp(search, 'i');
+    // Filter students who are not enrolled anywhere
+    if (notEnrolledOnly === 'true') {
+      filter.role = 'student';
+      const enrolledStudentIds = await Enrollment.distinct('student');
+      filter._id = { $nin: enrolledStudentIds };
+    }
+
+    // Safe escaped regex search
+    if (search && search.trim()) {
+      const safe = escapeRegex(search.trim());
+      const regex = new RegExp(safe, 'i');
       filter.$or = [{ name: regex }, { email: regex }, { rollNo: regex }, { department: regex }];
     }
 
@@ -111,15 +125,242 @@ router.get('/users', async (req, res, next) => {
       User.countDocuments(filter),
     ]);
 
+    // Enrich students with enrolled courses count
+    const enrichedUsers = await Promise.all(
+      users.map(async (u) => {
+        const uObj = u.toObject();
+        if (u.role === 'student') {
+          const enrollments = await Enrollment.find({ student: u._id }).populate('course', 'name code');
+          uObj.enrolledCoursesCount = enrollments.length;
+          uObj.enrolledCourses = enrollments.map((e) => e.course).filter(Boolean);
+        }
+        return uObj;
+      })
+    );
+
     res.json({
       success: true,
-      users,
+      users: enrichedUsers,
       pagination: {
         total,
         page: Number(page),
         limit: Number(limit),
         totalPages: Math.ceil(total / Number(limit)),
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/admin/users - Admin creates student, teacher, or admin (immediately approved)
+router.post('/users', async (req, res, next) => {
+  try {
+    const { role = 'student', name, email, password, department, rollNo, section = 'A', courseIds = [] } = req.body;
+
+    if (!name?.trim() || !email?.trim() || !department?.trim()) {
+      return res.status(400).json({ success: false, message: 'Name, email, and department are required.' });
+    }
+
+    if (!['student', 'teacher', 'admin'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Valid role (student, teacher, admin) is required.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const existingEmail = await User.findOne({ email: cleanEmail });
+    if (existingEmail) {
+      return res.status(409).json({ success: false, message: `An account with email "${cleanEmail}" already exists.` });
+    }
+
+    if (role === 'student') {
+      if (!rollNo?.trim()) {
+        return res.status(400).json({ success: false, message: 'Roll number is required for students.' });
+      }
+      const cleanRoll = rollNo.toUpperCase().trim();
+      const existingRoll = await User.findOne({ rollNo: cleanRoll });
+      if (existingRoll) {
+        return res.status(409).json({ success: false, message: `A student with roll number "${cleanRoll}" already exists.` });
+      }
+    }
+
+    const defaultPassword = password && password.trim().length >= 6
+      ? password.trim()
+      : role === 'student' ? 'Student@123' : role === 'teacher' ? 'Teacher@123' : 'Admin@123';
+
+    const passwordHash = await User.hashPassword(defaultPassword);
+
+    // CRITICAL: Users created directly by an administrator are auto-approved!
+    const userData = {
+      role,
+      name: name.trim(),
+      email: cleanEmail,
+      department: department.trim(),
+      passwordHash,
+      approved: true,
+      isActive: true,
+    };
+
+    if (role === 'student') {
+      userData.rollNo = rollNo.toUpperCase().trim();
+      userData.section = section.trim();
+    }
+
+    const newUser = await User.create(userData);
+
+    // Handle initial course enrollments if courses were selected
+    let enrolledCourses = [];
+    if (role === 'student' && Array.isArray(courseIds) && courseIds.length > 0) {
+      const validCourses = await Course.find({ _id: { $in: courseIds } });
+      const enrollmentDocs = validCourses.map((c) => ({
+        student: newUser._id,
+        course: c._id,
+        enrolledAt: new Date(),
+      }));
+      if (enrollmentDocs.length > 0) {
+        await Enrollment.insertMany(enrollmentDocs);
+        enrolledCourses = validCourses;
+      }
+    }
+
+    await AuditLog.create({
+      actor: req.user._id,
+      action: 'ADMIN_USER_CREATED',
+      targetType: 'User',
+      targetId: String(newUser._id),
+      details: { role, name: newUser.name, email: newUser.email, enrolledCount: enrolledCourses.length },
+      ip: req.ip || '',
+    });
+
+    const userObj = newUser.toObject();
+    delete userObj.passwordHash;
+    userObj.enrolledCoursesCount = enrolledCourses.length;
+    userObj.enrolledCourses = enrolledCourses;
+
+    res.status(201).json({
+      success: true,
+      message: `${role.charAt(0).toUpperCase() + role.slice(1)} account for ${newUser.name} created successfully.`,
+      user: userObj,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/admin/users/:id - Edit user profile and course enrollment
+router.put('/users/:id', async (req, res, next) => {
+  try {
+    const { name, email, department, rollNo, section, password, courseIds, approved, isActive } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (email && email.toLowerCase().trim() !== user.email) {
+      const existing = await User.findOne({ email: email.toLowerCase().trim(), _id: { $ne: user._id } });
+      if (existing) {
+        return res.status(409).json({ success: false, message: `Email "${email}" is already in use by another account.` });
+      }
+      user.email = email.toLowerCase().trim();
+    }
+
+    if (user.role === 'student' && rollNo && rollNo.toUpperCase().trim() !== user.rollNo) {
+      const existing = await User.findOne({ rollNo: rollNo.toUpperCase().trim(), _id: { $ne: user._id } });
+      if (existing) {
+        return res.status(409).json({ success: false, message: `Roll number "${rollNo}" is already in use.` });
+      }
+      user.rollNo = rollNo.toUpperCase().trim();
+    }
+
+    if (name) user.name = name.trim();
+    if (department) user.department = department.trim();
+    if (section && user.role === 'student') user.section = section.trim();
+    if (approved !== undefined) user.approved = Boolean(approved);
+    if (isActive !== undefined && String(user._id) !== String(req.user._id)) user.isActive = Boolean(isActive);
+
+    if (password && password.trim().length >= 6) {
+      user.passwordHash = await User.hashPassword(password.trim());
+    }
+
+    await user.save();
+
+    // Update course enrollments if provided
+    if (user.role === 'student' && Array.isArray(courseIds)) {
+      await Enrollment.deleteMany({ student: user._id });
+      if (courseIds.length > 0) {
+        const validCourses = await Course.find({ _id: { $in: courseIds } });
+        const enrollments = validCourses.map((c) => ({
+          student: user._id,
+          course: c._id,
+          enrolledAt: new Date(),
+        }));
+        await Enrollment.insertMany(enrollments);
+      }
+    }
+
+    await AuditLog.create({
+      actor: req.user._id,
+      action: 'ADMIN_USER_UPDATED',
+      targetType: 'User',
+      targetId: String(user._id),
+      details: { name: user.name, email: user.email },
+      ip: req.ip || '',
+    });
+
+    const userObj = user.toObject();
+    delete userObj.passwordHash;
+
+    res.json({
+      success: true,
+      message: `User ${user.name} updated successfully.`,
+      user: userObj,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/admin/users/:id - Delete or deactivate user
+router.delete('/users/:id', async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (String(user._id) === String(req.user._id)) {
+      return res.status(400).json({ success: false, message: 'You cannot delete your own admin account.' });
+    }
+
+    // Check if user has attendance records
+    const attendanceCount = await Attendance.countDocuments({ student: user._id });
+    const isForce = req.query.force === 'true';
+
+    if (attendanceCount > 0 && !isForce) {
+      return res.status(400).json({
+        success: false,
+        code: 'HAS_ATTENDANCE_RECORDS',
+        attendanceCount,
+        message: `This student has ${attendanceCount} recorded attendance check-ins. Deleting this account will permanently destroy historical attendance data. We recommend deactivating the user instead. Pass force=true to proceed with permanent deletion.`,
+      });
+    }
+
+    // Clean up enrollments and user record
+    await Enrollment.deleteMany({ student: user._id });
+    await User.findByIdAndDelete(user._id);
+
+    await AuditLog.create({
+      actor: req.user._id,
+      action: 'ADMIN_USER_DELETED',
+      targetType: 'User',
+      targetId: String(user._id),
+      details: { name: user.name, email: user.email, hadAttendance: attendanceCount },
+      ip: req.ip || '',
+    });
+
+    res.json({
+      success: true,
+      message: `Account for ${user.name} has been removed successfully.`,
     });
   } catch (err) {
     next(err);
@@ -181,7 +422,16 @@ router.get('/settings', async (req, res, next) => {
 // PUT /api/admin/settings - Update global system settings
 router.put('/settings', async (req, res, next) => {
   try {
-    const { attendanceThreshold, qrRefreshInterval, qrTokenExpiry, lateGraceMinutes, emailAlertsEnabled, institutionName } = req.body;
+    const {
+      attendanceThreshold,
+      qrRefreshInterval,
+      qrTokenExpiry,
+      lateGraceMinutes,
+      emailAlertsEnabled,
+      autoApproveTeachers,
+      allowStudentSelfEnrollment,
+      institutionName,
+    } = req.body;
 
     let settings = await SystemSetting.findOne({ key: 'global_config' });
     if (!settings) {
@@ -193,6 +443,8 @@ router.put('/settings', async (req, res, next) => {
     if (qrTokenExpiry !== undefined) settings.qrTokenExpiry = Number(qrTokenExpiry);
     if (lateGraceMinutes !== undefined) settings.lateGraceMinutes = Number(lateGraceMinutes);
     if (emailAlertsEnabled !== undefined) settings.emailAlertsEnabled = Boolean(emailAlertsEnabled);
+    if (autoApproveTeachers !== undefined) settings.autoApproveTeachers = Boolean(autoApproveTeachers);
+    if (allowStudentSelfEnrollment !== undefined) settings.allowStudentSelfEnrollment = Boolean(allowStudentSelfEnrollment);
     if (institutionName !== undefined) settings.institutionName = institutionName;
 
     await settings.save();
@@ -264,29 +516,37 @@ router.get('/analytics', async (req, res, next) => {
     const now = new Date();
     const activeSessionsCount = await Session.countDocuments({ status: 'open', endTime: { $gt: now } });
 
-    // Calculate campus-wide at-risk students count
-    const courses = await Course.find();
-    let totalEnrollmentInstances = 0;
+    // Aggregate attendance counts by course to optimize N+1 query loop
+    const attendanceStats = await Attendance.aggregate([
+      { $match: { status: { $in: ['present', 'late'] } } },
+      { $group: { _id: { student: '$student', course: '$course' }, attended: { $sum: 1 } } },
+    ]);
+
+    const studentAttendedMap = new Map();
+    for (const stat of attendanceStats) {
+      studentAttendedMap.set(`${stat._id.student}_${stat._id.course}`, stat.attended);
+    }
+
+    // Sessions count by course
+    const sessionCounts = await Session.aggregate([
+      { $group: { _id: '$course', total: { $sum: 1 } } },
+    ]);
+    const sessionCountMap = new Map();
+    for (const sc of sessionCounts) {
+      sessionCountMap.set(String(sc._id), sc.total);
+    }
+
+    const enrollments = await Enrollment.find().select('student course');
+    const totalEnrollmentInstances = enrollments.length;
     let atRiskInstances = 0;
 
-    for (const course of courses) {
-      const courseSessionsCount = await Session.countDocuments({ course: course._id });
-      if (courseSessionsCount === 0) continue;
-
-      const enrollments = await Enrollment.find({ course: course._id });
-      totalEnrollmentInstances += enrollments.length;
-
-      for (const enr of enrollments) {
-        const attended = await Attendance.countDocuments({
-          student: enr.student,
-          course: course._id,
-          status: { $in: ['present', 'late'] },
-        });
-
-        const metrics = calculateAttendanceMetrics(attended, courseSessionsCount, threshold);
-        if (metrics.isAtRisk) {
-          atRiskInstances++;
-        }
+    for (const enr of enrollments) {
+      const courseTotal = sessionCountMap.get(String(enr.course)) || 0;
+      if (courseTotal === 0) continue;
+      const attended = studentAttendedMap.get(`${enr.student}_${enr.course}`) || 0;
+      const metrics = calculateAttendanceMetrics(attended, courseTotal, threshold);
+      if (metrics.isAtRisk) {
+        atRiskInstances++;
       }
     }
 

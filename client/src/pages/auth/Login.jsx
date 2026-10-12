@@ -90,6 +90,12 @@ export default function Login() {
       const res = await login(email, password);
       toast.success(res.message || 'Logged in successfully!');
 
+      const redirectUrl = searchParams.get('redirect');
+      if (redirectUrl && redirectUrl.startsWith('/')) {
+        navigate(redirectUrl, { replace: true });
+        return;
+      }
+
       if (res.user.role === 'student') {
         navigate('/student/dashboard');
       } else if (res.user.role === 'teacher') {

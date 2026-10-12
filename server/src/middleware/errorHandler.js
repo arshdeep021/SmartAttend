@@ -1,7 +1,9 @@
 import { ZodError } from 'zod';
 
 export function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-vars
-  console.error('[Error Handler]', err);
+  if (process.env.NODE_ENV !== 'test') {
+    console.error('[Error Handler]', err);
+  }
 
   // Zod validation errors
   if (err instanceof ZodError) {
@@ -18,30 +20,55 @@ export function errorHandler(err, req, res, next) { // eslint-disable-line no-un
 
   // Mongoose duplicate key error (11000)
   if (err.code === 11000) {
+    if (err.keyPattern) {
+      if (err.keyPattern.session && err.keyPattern.student) {
+        return res.status(409).json({
+          success: false,
+          code: 'DUPLICATE_ATTENDANCE',
+          message: 'Your attendance has already been recorded for this session.',
+        });
+      }
+      if (err.keyPattern.student && err.keyPattern.course) {
+        return res.status(409).json({
+          success: false,
+          code: 'DUPLICATE_ENROLLMENT',
+          message: 'Student is already enrolled in this course.',
+        });
+      }
+      if (err.keyPattern.email) {
+        return res.status(409).json({
+          success: false,
+          code: 'DUPLICATE_EMAIL',
+          message: 'An account with this email address already exists.',
+        });
+      }
+      if (err.keyPattern.rollNo) {
+        return res.status(409).json({
+          success: false,
+          code: 'DUPLICATE_ROLL_NO',
+          message: 'A student with this roll number already exists.',
+        });
+      }
+      if (err.keyPattern.code) {
+        return res.status(409).json({
+          success: false,
+          code: 'DUPLICATE_CODE',
+          message: 'A course or item with this code already exists.',
+        });
+      }
+    }
+
     const field = Object.keys(err.keyValue || {})[0] || 'record';
-    // If it's the compound index on session + student
-    if (err.keyPattern && err.keyPattern.session && err.keyPattern.student) {
-      return res.status(409).json({
-        success: false,
-        code: 'DUPLICATE_ATTENDANCE',
-        message: 'Your attendance has already been marked for this session.',
-      });
-    }
-    if (err.keyPattern && err.keyPattern.student && err.keyPattern.course) {
-      return res.status(409).json({
-        success: false,
-        code: 'DUPLICATE_ENROLLMENT',
-        message: 'Student is already enrolled in this course.',
-      });
-    }
+    const val = err.keyValue ? err.keyValue[field] : '';
     return res.status(409).json({
       success: false,
-      message: `A duplicate entry already exists for ${field}: ${err.keyValue[field]}.`,
+      code: 'DUPLICATE_KEY',
+      message: `A duplicate entry already exists for ${field}${val ? `: ${val}` : ''}.`,
     });
   }
 
   // QR token custom errors
-  if (err.code === 'QR_EXPIRED' || err.code === 'QR_INVALID') {
+  if (err.code === 'QR_EXPIRED' || err.code === 'QR_INVALID' || err.code === 'CODE_EXPIRED') {
     return res.status(400).json({
       success: false,
       code: err.code,

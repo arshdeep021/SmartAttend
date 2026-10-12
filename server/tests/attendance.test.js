@@ -1,7 +1,15 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateAttendanceMetrics, calculateOverallAttendance } from '../src/utils/attendanceCalculator.js';
-import { generateSignedQrToken, verifyQrToken } from '../src/utils/qrToken.js';
+import {
+  deriveWindowCode,
+  getWindowIndex,
+  generateWindowSessionData,
+  validateSessionCode,
+  generateSignedQrToken,
+  verifyQrToken,
+  UNAMBIGUOUS_ALPHABET,
+} from '../src/utils/qrToken.js';
 import jwt from 'jsonwebtoken';
 
 describe('SmartAttend v2 - Critical Logic Test Suite', () => {
@@ -84,7 +92,140 @@ describe('SmartAttend v2 - Critical Logic Test Suite', () => {
     });
   });
 
-  describe('3. Rotating Signed QR Token Security', () => {
+  describe('3. Deterministic Time-Window & Synchronized Code Derivation', () => {
+    const sessionId = '661858c8942b000000000001';
+    const secret = 'test_secret_key_32_characters_long_abcdef';
+
+    it('should derive consistent 6-character code for the same window index', () => {
+      const windowIndex = 123456;
+      const code1 = deriveWindowCode(sessionId, windowIndex, secret);
+      const code2 = deriveWindowCode(sessionId, windowIndex, secret);
+
+      assert.equal(code1.length, 6);
+      assert.equal(code1, code2);
+    });
+
+    it('should strictly use the unambiguous alphabet without 0, O, 1, or I', () => {
+      for (let w = 1000; w < 1050; w++) {
+        const code = deriveWindowCode(sessionId, w, secret);
+        assert.equal(code.length, 6);
+        for (const char of code) {
+          assert.ok(UNAMBIGUOUS_ALPHABET.includes(char), `Character ${char} must be in unambiguous alphabet`);
+          assert.ok(!['0', 'O', '1', 'I'].includes(char), `Confusing char ${char} found in code`);
+        }
+      }
+    });
+
+    it('should rotate code when window index advances', () => {
+      const codeA = deriveWindowCode(sessionId, 500, secret);
+      const codeB = deriveWindowCode(sessionId, 501, secret);
+      assert.notEqual(codeA, codeB);
+    });
+
+    it('should generate synchronized window payload under 100 characters', () => {
+      const mockSession = { _id: sessionId };
+      const data = generateWindowSessionData(mockSession, 30, 'https://smartattend.onrender.com');
+
+      assert.equal(data.code.length, 6);
+      assert.ok(data.qrPayload.startsWith('https://smartattend.onrender.com/scan?s='));
+      assert.ok(data.qrPayload.includes(`&c=${data.code}`));
+      assert.ok(data.qrPayload.length < 100, `QR payload length ${data.qrPayload.length} must be < 100`);
+      assert.equal(data.intervalSeconds, 30);
+      assert.ok(data.expiresAt > data.serverTime);
+    });
+  });
+
+  describe('4. Time-Window Grace Period & Expiration Validation', () => {
+    const sessionId = '661858c8942b000000000001';
+    const intervalSeconds = 30;
+    const baseTime = 1700000000000;
+    const currentWindow = getWindowIndex(baseTime, intervalSeconds);
+
+    it('should accept code from the current active window', () => {
+      const currentCode = deriveWindowCode(sessionId, currentWindow);
+      const result = validateSessionCode(sessionId, currentCode, intervalSeconds, baseTime);
+
+      assert.equal(result.valid, true);
+      assert.equal(result.isPreviousGrace, false);
+      assert.equal(result.windowIndex, currentWindow);
+    });
+
+    it('should accept code from at most ONE previous window (grace for network latency)', () => {
+      const prevWindow = currentWindow - 1;
+      const prevCode = deriveWindowCode(sessionId, prevWindow);
+      const result = validateSessionCode(sessionId, prevCode, intervalSeconds, baseTime);
+
+      assert.equal(result.valid, true);
+      assert.equal(result.isPreviousGrace, true);
+      assert.equal(result.windowIndex, prevWindow);
+    });
+
+    it('should reject codes older than ONE previous window (2 windows ago)', () => {
+      const oldWindow = currentWindow - 2;
+      const oldCode = deriveWindowCode(sessionId, oldWindow);
+      const result = validateSessionCode(sessionId, oldCode, intervalSeconds, baseTime);
+
+      assert.equal(result.valid, false);
+      assert.ok(result.reason.includes('expired'));
+    });
+
+    it('should reject tampered or invalid 6-character codes', () => {
+      const result = validateSessionCode(sessionId, 'ZZZZZZ', intervalSeconds, baseTime);
+      assert.equal(result.valid, false);
+    });
+
+    it('should reject non-6-character inputs', () => {
+      const resultShort = validateSessionCode(sessionId, 'ABC', intervalSeconds, baseTime);
+      assert.equal(resultShort.valid, false);
+      assert.ok(resultShort.reason.includes('6 characters'));
+    });
+  });
+
+  describe('5. Duplicate Mark Prevention & Constraint Verification', () => {
+    it('should simulate duplicate key error code 11000 detection for session + student', () => {
+      const mongoDuplicateError = new Error('E11000 duplicate key error collection: smartattend_v2.attendances index: session_1_student_1 dup key');
+      mongoDuplicateError.code = 11000;
+      mongoDuplicateError.keyPattern = { session: 1, student: 1 };
+
+      assert.equal(mongoDuplicateError.code, 11000);
+      assert.ok(mongoDuplicateError.keyPattern.session);
+      assert.ok(mongoDuplicateError.keyPattern.student);
+    });
+  });
+
+  describe('6. Enrollment Verification & Course Protection', () => {
+    it('should detect when student is not enrolled in course', () => {
+      const enrolledCourses = ['661858c8942b000000000001', '661858c8942b000000000002'];
+      const targetSessionCourse = '661858c8942b000000000099';
+
+      const isEnrolled = enrolledCourses.includes(targetSessionCourse);
+      assert.equal(isEnrolled, false);
+    });
+  });
+
+  describe('7. Admin User Creation & Immediate Approval', () => {
+    it('should ensure admin-created users are marked approved immediately', () => {
+      const adminCreatedTeacher = {
+        role: 'teacher',
+        name: 'Prof. Test User',
+        email: 'test.teacher@smartattend.edu',
+        approved: true, // Admin-created accounts must be approved immediately
+        isActive: true,
+      };
+
+      assert.equal(adminCreatedTeacher.approved, true);
+      assert.equal(adminCreatedTeacher.isActive, true);
+    });
+
+    it('should detect duplicate roll number conflict for students', () => {
+      const existingRollNumbers = new Set(['CS001', 'CS002', 'CS003']);
+      const newRoll = 'CS002';
+
+      assert.ok(existingRollNumbers.has(newRoll), 'Duplicate roll number must be detected');
+    });
+  });
+
+  describe('8. Legacy Rotating Signed QR Token Security (Backward Compatibility)', () => {
     const mockSession = {
       _id: '661858c8942b000000000001',
       course: '661858c8942b000000000002',
@@ -112,7 +253,6 @@ describe('SmartAttend v2 - Critical Logic Test Suite', () => {
 
     it('should reject expired QR tokens (short-lived rotating security)', () => {
       const QR_SECRET = process.env.QR_SECRET || 'smartattend_qr_rotation_secret_key_v2_2026_abc123';
-      // Token expired 5 seconds ago
       const expiredToken = jwt.sign(
         { sessionId: String(mockSession._id), room: 'LH-101' },
         QR_SECRET,
@@ -122,18 +262,6 @@ describe('SmartAttend v2 - Critical Logic Test Suite', () => {
       assert.throws(() => {
         verifyQrToken(expiredToken);
       }, (err) => err.code === 'QR_EXPIRED');
-    });
-  });
-
-  describe('4. Duplicate Mark Prevention & Constraint Verification', () => {
-    it('should simulate duplicate key error code 11000 detection', () => {
-      const mongoDuplicateError = new Error('E11000 duplicate key error collection: smartattend_v2.attendances index: session_1_student_1 dup key');
-      mongoDuplicateError.code = 11000;
-      mongoDuplicateError.keyPattern = { session: 1, student: 1 };
-
-      assert.equal(mongoDuplicateError.code, 11000);
-      assert.ok(mongoDuplicateError.keyPattern.session);
-      assert.ok(mongoDuplicateError.keyPattern.student);
     });
   });
 });

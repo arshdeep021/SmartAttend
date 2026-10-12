@@ -1,24 +1,22 @@
 import { Router } from 'express';
-import crypto from 'crypto';
 import Session from '../models/Session.js';
 import Course from '../models/Course.js';
 import Attendance from '../models/Attendance.js';
 import Enrollment from '../models/Enrollment.js';
 import User from '../models/User.js';
+import SystemSetting from '../models/SystemSetting.js';
 import AuditLog from '../models/AuditLog.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { generateSignedQrToken } from '../utils/qrToken.js';
+import { generateWindowSessionData } from '../utils/qrToken.js';
+import { getDefaultRotationInterval, getClientUrl } from '../config/env.js';
 
 const router = Router();
 router.use(authenticate);
 
-function generateManualSessionCode() {
-  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Avoid confusing 0/O, 1/I
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+// Helper to get active rotation interval from settings
+async function getActiveInterval() {
+  const setting = await SystemSetting.findOne({ key: 'global_config' }).select('qrRefreshInterval');
+  return setting?.qrRefreshInterval || getDefaultRotationInterval();
 }
 
 // POST /api/sessions - Create & start a live session
@@ -42,7 +40,7 @@ router.post('/', authorize('teacher', 'admin'), async (req, res, next) => {
     const duration = Math.min(240, Math.max(5, Number(durationMinutes) || 15));
     const startTime = new Date();
     const endTime = new Date(Date.now() + duration * 60 * 1000);
-    const code = generateManualSessionCode();
+    const intervalSeconds = await getActiveInterval();
 
     const session = await Session.create({
       course: course._id,
@@ -52,23 +50,30 @@ router.post('/', authorize('teacher', 'admin'), async (req, res, next) => {
       startTime,
       endTime,
       status: 'open',
-      code,
       allowManualCode: Boolean(allowManualCode),
+      qrRefreshInterval: intervalSeconds,
     });
 
     const populated = await Session.findById(session._id)
       .populate('course', 'name code')
       .populate('teacher', 'name email');
 
-    // Generate initial QR token
-    const qrData = generateSignedQrToken(populated, 30);
+    // Generate initial deterministic window data
+    const origin = req.get('origin') || getClientUrl();
+    const windowData = generateWindowSessionData(populated, intervalSeconds, origin);
 
     res.status(201).json({
       success: true,
       message: 'Live attendance session started.',
       session: populated,
-      qrToken: qrData.token,
-      expiresInSeconds: qrData.expiresInSeconds,
+      code: windowData.code,
+      qrPayload: windowData.qrPayload,
+      qrToken: windowData.qrPayload, // backward-compat alias
+      windowStart: windowData.windowStart,
+      expiresAt: windowData.expiresAt,
+      serverTime: windowData.serverTime,
+      intervalSeconds: windowData.intervalSeconds,
+      expiresInSeconds: windowData.intervalSeconds,
     });
   } catch (err) {
     next(err);
@@ -95,8 +100,9 @@ router.get('/', async (req, res, next) => {
         sessions.map(async (sess) => {
           const attendanceCount = await Attendance.countDocuments({ session: sess._id });
           const enrolledCount = await Enrollment.countDocuments({ course: sess.course._id });
+          const sessObj = sess.toObject();
           return {
-            ...sess.toObject(),
+            ...sessObj,
             attendanceCount,
             enrolledCount,
           };
@@ -111,11 +117,12 @@ router.get('/', async (req, res, next) => {
       const enrollments = await Enrollment.find({ student: req.user._id }).select('course');
       const courseIds = enrollments.map((e) => e.course);
 
-      // Student can see live open sessions for their courses or recent sessions
+      // Student can see sessions for enrolled courses (CRITICAL: never expose session code)
       const sessions = await Session.find({
         course: { $in: courseIds },
         ...(status ? { status } : {}),
       })
+        .select('-code') // Strip rotating code completely from student responses
         .populate('course', 'name code department')
         .populate('teacher', 'name')
         .sort({ createdAt: -1 })
@@ -128,8 +135,11 @@ router.get('/', async (req, res, next) => {
             session: sess._id,
             student: req.user._id,
           });
+          const sessObj = sess.toObject();
+          delete sessObj.code; // guarantee code is never present
+
           return {
-            ...sess.toObject(),
+            ...sessObj,
             markedByMe: Boolean(myAttendance),
             myAttendanceStatus: myAttendance?.status || null,
             myMarkedAt: myAttendance?.markedAt || null,
@@ -156,21 +166,37 @@ router.get('/', async (req, res, next) => {
 // GET /api/sessions/:id - Get session details
 router.get('/:id', async (req, res, next) => {
   try {
-    const session = await Session.findById(req.params.id)
+    const isStudent = req.user.role === 'student';
+    let query = Session.findById(req.params.id)
       .populate('course', 'name code department totalPlannedClasses')
       .populate('teacher', 'name email department');
 
+    if (isStudent) {
+      query = query.select('-code');
+    }
+
+    const session = await query;
     if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found.' });
+    }
+
+    // Ownership check for teachers
+    if (req.user.role === 'teacher' && String(session.teacher._id || session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Access forbidden: You do not own this session.' });
     }
 
     const attendanceCount = await Attendance.countDocuments({ session: session._id });
     const enrolledCount = await Enrollment.countDocuments({ course: session.course._id });
 
+    const sessionObj = session.toObject();
+    if (isStudent) {
+      delete sessionObj.code;
+    }
+
     res.json({
       success: true,
       session: {
-        ...session.toObject(),
+        ...sessionObj,
         attendanceCount,
         enrolledCount,
       },
@@ -180,7 +206,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-// GET /api/sessions/:id/qr - Get rotating signed QR token
+// GET /api/sessions/:id/qr - Get rotating signed QR and code (Single Source of Truth)
 router.get('/:id/qr', authorize('teacher', 'admin'), async (req, res, next) => {
   try {
     const session = await Session.findById(req.params.id)
@@ -204,13 +230,20 @@ router.get('/:id/qr', authorize('teacher', 'admin'), async (req, res, next) => {
       });
     }
 
-    const qrData = generateSignedQrToken(session, 30);
+    const intervalSeconds = await getActiveInterval();
+    const origin = req.get('origin') || getClientUrl();
+    const windowData = generateWindowSessionData(session, intervalSeconds, origin);
 
     res.json({
       success: true,
-      qrToken: qrData.token,
-      expiresInSeconds: qrData.expiresInSeconds,
-      code: session.code,
+      code: windowData.code,
+      qrPayload: windowData.qrPayload,
+      qrToken: windowData.qrPayload, // backward-compat alias
+      windowStart: windowData.windowStart,
+      expiresAt: windowData.expiresAt,
+      serverTime: windowData.serverTime,
+      intervalSeconds: windowData.intervalSeconds,
+      expiresInSeconds: windowData.intervalSeconds,
       session,
     });
   } catch (err) {
@@ -276,6 +309,11 @@ router.get('/:id/attendees', authorize('teacher', 'admin'), async (req, res, nex
       return res.status(404).json({ success: false, message: 'Session not found.' });
     }
 
+    // Ownership check for teachers
+    if (req.user.role === 'teacher' && String(session.teacher._id || session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Unauthorized: You do not own this session.' });
+    }
+
     const totalEnrolled = await Enrollment.countDocuments({ course: session.course._id });
     const records = await Attendance.find({ session: session._id })
       .populate('student', 'name email rollNo department section')
@@ -304,6 +342,10 @@ router.post('/:id/manual-mark', authorize('teacher', 'admin'), async (req, res, 
     const session = await Session.findById(req.params.id);
     if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found.' });
+    }
+
+    if (req.user.role === 'teacher' && String(session.teacher._id || session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Unauthorized: You do not own this session.' });
     }
 
     // Verify enrollment
@@ -366,6 +408,10 @@ router.delete('/:id/attendance/:studentId', authorize('teacher', 'admin'), async
     const session = await Session.findById(req.params.id);
     if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found.' });
+    }
+
+    if (req.user.role === 'teacher' && String(session.teacher._id || session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Unauthorized: You do not own this session.' });
     }
 
     const deleted = await Attendance.findOneAndDelete({

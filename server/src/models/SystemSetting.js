@@ -16,9 +16,9 @@ const systemSettingSchema = new mongoose.Schema(
     },
     qrRefreshInterval: {
       type: Number,
-      default: 20, // seconds
+      default: 30, // seconds
       min: 10,
-      max: 60,
+      max: 120,
     },
     qrTokenExpiry: {
       type: Number,
@@ -35,6 +35,14 @@ const systemSettingSchema = new mongoose.Schema(
     emailAlertsEnabled: {
       type: Boolean,
       default: false,
+    },
+    autoApproveTeachers: {
+      type: Boolean,
+      default: false,
+    },
+    allowStudentSelfEnrollment: {
+      type: Boolean,
+      default: true,
     },
     institutionName: {
       type: String,

@@ -2,13 +2,17 @@
   "name": "smartattend-v2",
   "version": "2.0.0",
   "description": "SmartAttend v2 - Next-Gen Smart Attendance Management System",
+  "main": "server/src/index.js",
+  "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n \"server,client\" -c \"cyan,magenta\" \"npm.cmd run dev --prefix server\" \"npm.cmd run dev --prefix client\"",
-    "dev:server": "npm.cmd run dev --prefix server",
-    "dev:client": "npm.cmd run dev --prefix client",
-    "seed": "npm.cmd run seed --prefix server",
-    "test": "npm.cmd test --prefix server",
-    "build": "npm.cmd run build --prefix client"
+    "start": "node server/src/index.js",
+    "build": "npm run build --prefix client",
+    "dev": "concurrently -k -n \"server,client\" -c \"cyan,magenta\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "seed": "npm run seed --prefix server",
+    "test": "npm test --prefix server",
+    "postinstall": "npm install --prefix server && npm install --prefix client"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

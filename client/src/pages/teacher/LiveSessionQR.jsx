@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,12 +10,9 @@ import {
   Pause,
   Clock,
   Users,
-  CheckCircle2,
   XCircle,
   Plus,
   RefreshCw,
-  AlertTriangle,
-  RotateCcw,
   Check,
   ChevronLeft,
 } from 'lucide-react';
@@ -28,9 +25,12 @@ export default function LiveSessionQR() {
   const navigate = useNavigate();
 
   const [session, setSession] = useState(null);
-  const [qrToken, setQrToken] = useState('');
-  const [expiresInSeconds, setExpiresInSeconds] = useState(25);
-  const [secondsRemaining, setSecondsRemaining] = useState(25);
+  const [code, setCode] = useState('');
+  const [qrPayload, setQrPayload] = useState('');
+  const [intervalSeconds, setIntervalSeconds] = useState(30);
+  const [expiresAt, setExpiresAt] = useState(0);
+  const [serverOffset, setServerOffset] = useState(0);
+  const [secondsRemaining, setSecondsRemaining] = useState(30);
   const [isPaused, setIsPaused] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [attendees, setAttendees] = useState([]);
@@ -43,29 +43,41 @@ export default function LiveSessionQR() {
   const [searchStudent, setSearchStudent] = useState('');
   const [markingStudent, setMarkingStudent] = useState(false);
 
-  const timerRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
-  // Fetch QR token from backend
-  const fetchQrToken = async () => {
-    if (!sessionId || isPaused) return;
+  // Fetch rotating QR payload and code together (Single Source of Truth)
+  const fetchQrToken = useCallback(async () => {
+    if (!sessionId || isPaused || isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       const res = await api.get(`/sessions/${sessionId}/qr`);
-      setQrToken(res.qrToken);
-      setSession(res.session);
-      const interval = res.expiresInSeconds ? Math.min(25, res.expiresInSeconds - 5) : 20;
-      setExpiresInSeconds(interval);
-      setSecondsRemaining(interval);
+      const offset = (res.serverTime || Date.now()) - Date.now();
+      const interval = res.intervalSeconds || 30;
+
+      // ATOMIC UPDATE: Both code and QR payload set in the exact same state pass
+      setCode(res.code || '');
+      setQrPayload(res.qrPayload || '');
+      setExpiresAt(res.expiresAt || 0);
+      setIntervalSeconds(interval);
+      setServerOffset(offset);
+      if (res.session) setSession(res.session);
+
+      const nowServer = Date.now() + offset;
+      const initialRemaining = Math.max(0, Math.ceil(((res.expiresAt || 0) - nowServer) / 1000));
+      setSecondsRemaining(initialRemaining > 0 ? initialRemaining : interval);
     } catch (err) {
       if (err.code === 'SESSION_CLOSED' || err.message?.includes('closed')) {
-        toast.error('Session has ended.');
+        toast.error('This attendance session has closed.');
       } else {
-        console.error('QR fetch error:', err);
+        console.error('QR refresh error:', err);
       }
+    } finally {
+      isFetchingRef.current = false;
     }
-  };
+  }, [sessionId, isPaused]);
 
-  // Poll attendees every 3 seconds for live check-in updates
-  const fetchAttendees = async () => {
+  // Poll attendees every 3 seconds for live check-in feed
+  const fetchAttendees = useCallback(async () => {
     if (!sessionId) return;
     try {
       const res = await api.get(`/sessions/${sessionId}/attendees`);
@@ -75,7 +87,7 @@ export default function LiveSessionQR() {
     } catch (err) {
       console.error('Attendee poll error:', err);
     }
-  };
+  }, [sessionId]);
 
   // Fetch course roster for manual mark search
   const fetchRoster = async (courseId) => {
@@ -83,7 +95,7 @@ export default function LiveSessionQR() {
       const res = await api.get(`/courses/${courseId}/roster`);
       setRoster(res.roster || []);
     } catch (err) {
-      console.error(err);
+      console.error('Roster error:', err);
     }
   };
 
@@ -100,7 +112,7 @@ export default function LiveSessionQR() {
       setLoading(false);
     }
     init();
-  }, [sessionId]);
+  }, [sessionId, fetchQrToken, fetchAttendees]);
 
   // Load roster when session is set
   useEffect(() => {
@@ -109,28 +121,44 @@ export default function LiveSessionQR() {
     }
   }, [session?.course]);
 
-  // QR rotation countdown ticker
+  // Precision countdown ticker synced with server clock offset
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || !expiresAt) return;
 
-    timerRef.current = setInterval(() => {
-      setSecondsRemaining((prev) => {
-        if (prev <= 1) {
-          fetchQrToken();
-          return expiresInSeconds;
-        }
-        return prev - 1;
-      });
+    const intervalId = setInterval(() => {
+      const nowServer = Date.now() + serverOffset;
+      const msLeft = expiresAt - nowServer;
+
+      if (msLeft <= 500) {
+        // Window expired on server clock, fetch next window immediately
+        fetchQrToken();
+      } else {
+        const secsLeft = Math.ceil(msLeft / 1000);
+        setSecondsRemaining(Math.max(0, secsLeft));
+      }
     }, 1000);
 
-    return () => clearInterval(timerRef.current);
-  }, [expiresInSeconds, isPaused, sessionId]);
+    return () => clearInterval(intervalId);
+  }, [expiresAt, serverOffset, isPaused, fetchQrToken]);
+
+  // If unpaused, immediately fetch fresh current window
+  const handleTogglePause = () => {
+    if (isPaused) {
+      setIsPaused(false);
+      // Will trigger fresh fetch
+      setTimeout(() => {
+        fetchQrToken();
+      }, 50);
+    } else {
+      setIsPaused(true);
+    }
+  };
 
   // Attendee polling interval (every 3s)
   useEffect(() => {
     const attendeeInterval = setInterval(fetchAttendees, 3000);
     return () => clearInterval(attendeeInterval);
-  }, [sessionId]);
+  }, [fetchAttendees]);
 
   // Fullscreen toggle
   const toggleFullscreen = () => {
@@ -214,7 +242,7 @@ export default function LiveSessionQR() {
     return (
       <div className="py-20 text-center flex flex-col items-center">
         <RefreshCw className="w-8 h-8 text-brand-600 animate-spin mb-2" />
-        <p className="text-xs text-slate-500">Initializing Live QR Projector...</p>
+        <p className="text-xs text-slate-500">Initializing Live Synchronized QR Projector...</p>
       </div>
     );
   }
@@ -222,7 +250,8 @@ export default function LiveSessionQR() {
   // Circular countdown calculations
   const countdownRadius = 18;
   const countdownCircumference = 2 * Math.PI * countdownRadius;
-  const countdownProgress = (secondsRemaining / expiresInSeconds) * countdownCircumference;
+  const countdownRatio = intervalSeconds > 0 ? Math.min(1, Math.max(0, secondsRemaining / intervalSeconds)) : 1;
+  const countdownProgress = countdownRatio * countdownCircumference;
 
   return (
     <div className={`space-y-6 ${isFullscreen ? 'p-8 bg-slate-950 text-white min-h-screen' : ''}`}>
@@ -237,7 +266,7 @@ export default function LiveSessionQR() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <span className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-ping'}`} />
               <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
                 {session?.topic || 'Live Attendance'}
               </h1>
@@ -252,11 +281,11 @@ export default function LiveSessionQR() {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Pause / Resume Button */}
           <button
-            onClick={() => setIsPaused(!isPaused)}
+            onClick={handleTogglePause}
             className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
               isPaused
-                ? 'bg-amber-500 text-white border-amber-500'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
             }`}
           >
             {isPaused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5" />}
@@ -303,13 +332,17 @@ export default function LiveSessionQR() {
       {/* Main Dual Grid: Giant Rotating QR Projector (Left) vs Live Check-In Feed (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Huge QR Code Screen (Projector Friendly) */}
-        <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl flex flex-col items-center justify-center text-center">
+        <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-4 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl flex flex-col items-center justify-center text-center">
           {/* Live Badge & Countdown Ring */}
           <div className="flex items-center justify-between w-full mb-6">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 text-xs font-black uppercase tracking-wider bg-red-500 text-white rounded-full flex items-center gap-1.5 shadow-sm animate-pulse">
+              <span
+                className={`px-3 py-1 text-xs font-black uppercase tracking-wider text-white rounded-full flex items-center gap-1.5 shadow-sm ${
+                  isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'
+                }`}
+              >
                 <span className="w-2 h-2 rounded-full bg-white" />
-                Live Projector
+                {isPaused ? 'Rotation Frozen' : 'Live Projector'}
               </span>
             </div>
 
@@ -330,7 +363,7 @@ export default function LiveSessionQR() {
                     cx="20"
                     cy="20"
                     r={countdownRadius}
-                    stroke="#4f46e5"
+                    stroke={isPaused ? '#f59e0b' : '#4f46e5'}
                     strokeWidth="3.5"
                     strokeDasharray={countdownCircumference}
                     strokeDashoffset={countdownCircumference - countdownProgress}
@@ -340,51 +373,56 @@ export default function LiveSessionQR() {
                   />
                 </svg>
                 <span className="absolute text-[11px] font-black text-brand-600 dark:text-brand-400">
-                  {secondsRemaining}s
+                  {isPaused ? '⏸' : `${secondsRemaining}s`}
                 </span>
               </div>
-              <span className="hidden sm:inline">Refreshes automatically</span>
+              <span className="hidden sm:inline">
+                {isPaused ? 'Paused' : `Rotates every ${intervalSeconds}s`}
+              </span>
             </div>
           </div>
 
-          {/* Giant QR Code Display */}
+          {/* High-Contrast Projector-Optimized QR Code Display */}
           <motion.div
-            key={qrToken}
-            initial={{ scale: 0.96, opacity: 0.8 }}
+            key={code || qrPayload}
+            initial={{ scale: 0.97, opacity: 0.85 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="p-6 sm:p-8 bg-white rounded-3xl shadow-2xl border-4 border-slate-100 dark:border-slate-800 inline-block my-2"
+            transition={{ duration: 0.25 }}
+            className="p-4 sm:p-8 bg-white rounded-3xl shadow-2xl border-4 border-slate-100 dark:border-slate-800 inline-block my-2 max-w-full"
           >
-            {qrToken ? (
+            {qrPayload ? (
               <QRCodeSVG
-                value={qrToken}
-                size={280}
-                level="H"
-                includeMargin={true}
+                value={qrPayload}
+                size={320}
+                level="M"
+                marginSize={4}
+                bgColor="#ffffff"
+                fgColor="#000000"
+                className="w-full max-w-[340px] h-auto aspect-square"
               />
             ) : (
-              <div className="w-[280px] h-[280px] flex items-center justify-center text-slate-400">
+              <div className="w-[320px] h-[320px] flex items-center justify-center text-slate-400">
                 Generating QR Token...
               </div>
             )}
           </motion.div>
 
-          {/* Prominent Manual Session Code Fallback Banner */}
+          {/* Prominent Synchronized Manual Session PIN Fallback */}
           <div className="mt-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 w-full max-w-md">
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
-              Manual Fallback Session PIN
+              Synchronized Session PIN (6 Chars)
             </p>
-            <span className="font-mono font-black text-3xl tracking-[0.3em] text-brand-600 dark:text-brand-400">
-              {session?.code || 'LIVE99'}
+            <span className="font-mono font-black text-3xl sm:text-4xl tracking-[0.3em] text-brand-600 dark:text-brand-400 select-all">
+              {code || '------'}
             </span>
             <p className="text-[11px] text-slate-400 mt-1">
-              Students without camera access can enter this 6-character code
+              Students without camera access can enter this exact 6-character code
             </p>
           </div>
         </div>
 
         {/* Right Column: Live Attendees Check-in Feed */}
-        <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col h-[560px]">
+        <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col h-[580px]">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -417,7 +455,7 @@ export default function LiveSessionQR() {
                     key={a._id}
                     initial={{ opacity: 0, x: -20, backgroundColor: 'rgba(79, 70, 229, 0.15)' }}
                     animate={{ opacity: 1, x: 0, backgroundColor: 'transparent' }}
-                    transition={{ duration: 0.4 }}
+                    transition={{ duration: 0.3 }}
                     className="p-3 text-xs flex items-center justify-between rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40"
                   >
                     <div className="flex items-center gap-3">
@@ -429,7 +467,12 @@ export default function LiveSessionQR() {
                           {a.student?.name || 'Student'}
                         </p>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          {a.student?.rollNo || 'CS---'} &bull; {new Date(a.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {a.student?.rollNo || 'CS---'} &bull;{' '}
+                          {new Date(a.markedAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
                         </p>
                       </div>
                     </div>

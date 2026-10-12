@@ -8,90 +8,197 @@ import SystemSetting from '../models/SystemSetting.js';
 import AuditLog from '../models/AuditLog.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { attendanceMarkLimiter } from '../middleware/rateLimiter.js';
-import { verifyQrToken } from '../utils/qrToken.js';
+import { validateSessionCode, verifyQrToken } from '../utils/qrToken.js';
+import { getDefaultRotationInterval } from '../config/env.js';
 import { calculateAttendanceMetrics, calculateOverallAttendance } from '../utils/attendanceCalculator.js';
 import { sendLowAttendanceAlertEmail } from '../utils/mailer.js';
 
 const router = Router();
 router.use(authenticate);
 
-// POST /api/attendance/mark - Student marks attendance via signed QR token or manual code
+// POST /api/attendance/mark - Student marks attendance via rotating QR token or manual code
 router.post('/mark', authorize('student'), attendanceMarkLimiter, async (req, res, next) => {
   try {
-    const { qrToken, manualCode, deviceInfo } = req.body;
+    const { qrToken, qrPayload, manualCode, code, sessionId: inputSessionId, s, c, deviceInfo } = req.body;
 
-    if (!qrToken && !manualCode) {
+    let sessionId = inputSessionId || s;
+    let submittedCode = code || manualCode || c;
+    let method = manualCode ? 'manual_code' : 'qr';
+
+    const rawScan = qrPayload || qrToken;
+    if (rawScan) {
+      method = 'qr';
+      if (typeof rawScan === 'string') {
+        const trimmed = rawScan.trim();
+        // Check for URL containing parameters s and c
+        if (trimmed.includes('?s=') || trimmed.includes('&s=') || trimmed.includes('&c=') || trimmed.includes('?c=')) {
+          try {
+            const urlObj = new URL(trimmed, 'http://dummy.com');
+            sessionId = urlObj.searchParams.get('s') || sessionId;
+            submittedCode = urlObj.searchParams.get('c') || submittedCode;
+          } catch (e) {
+            const sMatch = trimmed.match(/[?&]s=([a-f0-9]{24})/i);
+            const cMatch = trimmed.match(/[?&]c=([A-Z0-9]{6})/i);
+            if (sMatch) sessionId = sMatch[1];
+            if (cMatch) submittedCode = cMatch[1];
+          }
+        } else if (trimmed.includes(':') && trimmed.length >= 31) {
+          // Compact format sessionId:code
+          const parts = trimmed.split(':');
+          if (parts[0].length === 24) {
+            sessionId = parts[0];
+            submittedCode = parts[1];
+          }
+        } else {
+          // Legacy signed JWT fallback
+          try {
+            const payload = verifyQrToken(trimmed);
+            sessionId = payload.sessionId;
+          } catch (e) {
+            return res.status(400).json({
+              success: false,
+              code: e.code || 'QR_INVALID',
+              message: e.message || 'Invalid or expired QR code.',
+            });
+          }
+        }
+      }
+    }
+
+    if (!sessionId && !submittedCode) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide either a scanned QR token or the manual session code.',
+        message: 'Please provide either a scanned QR code or the 6-character session PIN.',
       });
     }
 
-    let sessionId;
-    let method = 'qr';
+    const settings = await SystemSetting.findOne({ key: 'global_config' });
+    const intervalSeconds = settings?.qrRefreshInterval || getDefaultRotationInterval();
+    const now = new Date();
 
-    if (qrToken) {
-      const payload = verifyQrToken(qrToken);
-      sessionId = payload.sessionId;
-      method = 'qr';
-    } else if (manualCode) {
-      const codeClean = manualCode.trim().toUpperCase();
-      const matchedSession = await Session.findOne({
-        code: codeClean,
-        status: 'open',
-        endTime: { $gt: new Date() },
-      });
+    let session = null;
 
-      if (!matchedSession) {
+    if (sessionId) {
+      session = await Session.findById(sessionId).populate('course');
+      if (!session) {
+        return res.status(404).json({ success: false, message: 'Attendance session not found.' });
+      }
+
+      if (session.status !== 'open' || session.endTime <= now) {
         return res.status(400).json({
           success: false,
-          code: 'INVALID_CODE',
-          message: 'Invalid, closed, or expired session code.',
+          code: 'SESSION_CLOSED',
+          message: 'This attendance session has ended or has been closed by the instructor.',
         });
       }
 
-      if (!matchedSession.allowManualCode) {
+      // Verify student enrollment
+      const isEnrolled = await Enrollment.findOne({
+        student: req.user._id,
+        course: session.course._id,
+      });
+
+      if (!isEnrolled) {
+        return res.status(403).json({
+          success: false,
+          code: 'NOT_ENROLLED',
+          message: `You are not enrolled in ${session.course.name} (${session.course.code}). Only enrolled students can record attendance.`,
+        });
+      }
+
+      // If submitted via manual code, check if teacher enabled manual code
+      if (method === 'manual_code' && !session.allowManualCode) {
         return res.status(400).json({
           success: false,
+          code: 'MANUAL_CODE_DISABLED',
           message: 'The instructor has disabled manual code entry for this session.',
         });
       }
 
-      sessionId = matchedSession._id;
+      // Validate rotating code (accepts current window and 1 previous grace window)
+      if (submittedCode) {
+        const val = validateSessionCode(session._id, submittedCode, intervalSeconds, now.getTime());
+        if (!val.valid) {
+          return res.status(400).json({
+            success: false,
+            code: 'CODE_EXPIRED',
+            message: val.reason,
+          });
+        }
+      }
+    } else {
+      // Student entered manual code WITHOUT specifying sessionId
+      const codeClean = (submittedCode || '').trim().toUpperCase();
+      if (codeClean.length !== 6) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_CODE',
+          message: 'Session PIN must be 6 characters.',
+        });
+      }
+
+      // Find courses student is enrolled in
+      const enrollments = await Enrollment.find({ student: req.user._id }).select('course');
+      const courseIds = enrollments.map((e) => e.course);
+
+      if (courseIds.length === 0) {
+        return res.status(403).json({
+          success: false,
+          code: 'NOT_ENROLLED',
+          message: 'You are not enrolled in any active courses.',
+        });
+      }
+
+      // Find open sessions for student's enrolled courses
+      const openSessions = await Session.find({
+        course: { $in: courseIds },
+        status: 'open',
+        endTime: { $gt: now },
+      }).populate('course');
+
+      if (openSessions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          code: 'NO_OPEN_SESSION',
+          message: 'No active attendance sessions found for your enrolled courses.',
+        });
+      }
+
+      let matchedSession = null;
+      let manualCodeDisabled = false;
+
+      for (const sess of openSessions) {
+        const val = validateSessionCode(sess._id, codeClean, intervalSeconds, now.getTime());
+        if (val.valid) {
+          if (!sess.allowManualCode) {
+            manualCodeDisabled = true;
+            continue;
+          }
+          matchedSession = sess;
+          break;
+        }
+      }
+
+      if (!matchedSession) {
+        if (manualCodeDisabled) {
+          return res.status(400).json({
+            success: false,
+            code: 'MANUAL_CODE_DISABLED',
+            message: 'Manual code entry is disabled for this session by the instructor.',
+          });
+        }
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_CODE',
+          message: 'Invalid or expired session code.',
+        });
+      }
+
+      session = matchedSession;
       method = 'manual_code';
     }
 
-    // Load session and verify status
-    const session = await Session.findById(sessionId).populate('course');
-    if (!session) {
-      return res.status(404).json({ success: false, message: 'Attendance session not found.' });
-    }
-
-    const now = new Date();
-    if (session.status !== 'open' || session.endTime <= now) {
-      return res.status(400).json({
-        success: false,
-        code: 'SESSION_CLOSED',
-        message: 'This attendance session has ended or has been closed by the instructor.',
-      });
-    }
-
-    // Verify enrollment
-    const isEnrolled = await Enrollment.findOne({
-      student: req.user._id,
-      course: session.course._id,
-    });
-
-    if (!isEnrolled) {
-      return res.status(403).json({
-        success: false,
-        code: 'NOT_ENROLLED',
-        message: `You are not enrolled in ${session.course.name} (${session.course.code}). Only enrolled students can record attendance.`,
-      });
-    }
-
-    // Determine status (check if late based on system settings)
-    const settings = await SystemSetting.findOne({ key: 'global_config' });
+    // Determine attendance status (present vs late based on grace minutes)
     const lateGraceMinutes = settings?.lateGraceMinutes || 10;
     const threshold = settings?.attendanceThreshold || 75;
 
@@ -101,20 +208,40 @@ router.post('/mark', authorize('student'), attendanceMarkLimiter, async (req, re
       attendanceStatus = 'late';
     }
 
-    // Record attendance (compound unique index will catch duplicates)
-    const attendance = await Attendance.create({
-      session: session._id,
-      student: req.user._id,
+    // Record attendance (compound unique index catches duplicates)
+    let attendance;
+    try {
+      attendance = await Attendance.create({
+        session: session._id,
+        student: req.user._id,
+        course: session.course._id,
+        method,
+        status: attendanceStatus,
+        markedAt: now,
+        ip: req.ip || req.headers['x-forwarded-for'] || '',
+        deviceInfo: deviceInfo || '',
+      });
+    } catch (createErr) {
+      if (createErr.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          code: 'DUPLICATE_ATTENDANCE',
+          message: 'Your attendance has already been recorded for this session.',
+        });
+      }
+      throw createErr;
+    }
+
+    // Recompute student metrics for this course (conducted = closed or ended sessions + this marked session)
+    const totalConducted = await Session.countDocuments({
       course: session.course._id,
-      method,
-      status: attendanceStatus,
-      markedAt: now,
-      ip: req.ip || req.headers['x-forwarded-for'] || '',
-      deviceInfo: deviceInfo || '',
+      $or: [
+        { status: 'closed' },
+        { endTime: { $lte: now } },
+        { _id: session._id },
+      ],
     });
 
-    // Recompute student metrics for this course
-    const totalConducted = await Session.countDocuments({ course: session.course._id });
     const totalAttended = await Attendance.countDocuments({
       student: req.user._id,
       course: session.course._id,
@@ -123,7 +250,7 @@ router.post('/mark', authorize('student'), attendanceMarkLimiter, async (req, re
 
     const metrics = calculateAttendanceMetrics(totalAttended, totalConducted, threshold);
 
-    // If attendance is below threshold, trigger notification immediately!
+    // If attendance is below threshold, trigger notification immediately
     if (metrics.isAtRisk) {
       const existingWarning = await Notification.findOne({
         user: req.user._id,
@@ -147,7 +274,7 @@ router.post('/mark', authorize('student'), attendanceMarkLimiter, async (req, re
           },
         });
 
-        // Dispatch simulated/live email
+        // Dispatch alert email
         await sendLowAttendanceAlertEmail({
           studentEmail: req.user.email,
           studentName: req.user.name,
@@ -229,16 +356,28 @@ router.get('/student-stats', authorize('student'), async (req, res, next) => {
       populate: { path: 'teacher', select: 'name email' },
     });
 
+    const now = new Date();
     const courseStatsList = [];
 
     for (const enr of enrollments) {
       if (!enr.course) continue;
-      const totalConducted = await Session.countDocuments({ course: enr.course._id });
-      const attended = await Attendance.countDocuments({
+      // Count conducted sessions: closed or ended sessions, or any session student attended
+      const attendedSessionIds = await Attendance.find({
         student: req.user._id,
         course: enr.course._id,
         status: { $in: ['present', 'late'] },
+      }).distinct('session');
+
+      const totalConducted = await Session.countDocuments({
+        course: enr.course._id,
+        $or: [
+          { status: 'closed' },
+          { endTime: { $lte: now } },
+          { _id: { $in: attendedSessionIds } },
+        ],
       });
+
+      const attended = attendedSessionIds.length;
 
       courseStatsList.push({
         course: enr.course,
@@ -257,11 +396,12 @@ router.get('/student-stats', authorize('student'), async (req, res, next) => {
 
     const enrolledCourseIds = enrollments.map((e) => e.course?._id).filter(Boolean);
 
-    // Find sessions scheduled or created today
+    // Find sessions scheduled or created today (CRITICAL: never expose session code)
     const todaysSessions = await Session.find({
       course: { $in: enrolledCourseIds },
       createdAt: { $gte: todayStart, $lte: todayEnd },
     })
+      .select('-code')
       .populate('course', 'name code color')
       .populate('teacher', 'name')
       .sort({ startTime: 1 });
@@ -269,7 +409,6 @@ router.get('/student-stats', authorize('student'), async (req, res, next) => {
     const todaysEnriched = await Promise.all(
       todaysSessions.map(async (sess) => {
         const mark = await Attendance.findOne({ session: sess._id, student: req.user._id });
-        const now = new Date();
         let statusBadge = 'upcoming';
 
         if (mark) {
@@ -280,15 +419,18 @@ router.get('/student-stats', authorize('student'), async (req, res, next) => {
           statusBadge = 'missed';
         }
 
+        const sessObj = sess.toObject();
+        delete sessObj.code;
+
         return {
-          ...sess.toObject(),
+          ...sessObj,
           statusBadge,
           markedRecord: mark,
         };
       })
     );
 
-    // Recent 10 attendance records for activity feed
+    // Recent 8 attendance records for activity feed
     const recentActivity = await Attendance.find({ student: req.user._id })
       .populate('course', 'name code color')
       .populate('session', 'topic room')
