@@ -1,20 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext.jsx';
-import { GraduationCap, Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useAuth } from "../../context/AuthContext.jsx";
+import {
+  GraduationCap,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  ArrowRight,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const initialEmail = searchParams.get('email') || '';
+  const initialEmail = searchParams.get("email") || "";
 
-  const [role, setRole] = useState('student'); // 'student' | 'teacher' | 'admin'
-  const [email, setEmail] = useState(initialEmail || 'kabir.mehta@smartattend.edu');
-  const [password, setPassword] = useState('Student@123');
+  const [role, setRole] = useState("student"); // 'student' | 'teacher' | 'admin'
+  const [email, setEmail] = useState(
+    initialEmail || "kabir.mehta@smartattend.edu",
+  );
+  const [password, setPassword] = useState("Student@123");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -23,90 +34,93 @@ export default function Login() {
   useEffect(() => {
     if (initialEmail) {
       setEmail(initialEmail);
-      if (initialEmail.includes('admin')) {
-        setRole('admin');
-        setPassword('Admin@123');
-      } else if (initialEmail.includes('dr.') || initialEmail.includes('prof.')) {
-        setRole('teacher');
-        setPassword('Teacher@123');
+      if (initialEmail.includes("admin")) {
+        setRole("admin");
+        setPassword("Admin@123");
+      } else if (
+        initialEmail.includes("dr.") ||
+        initialEmail.includes("prof.")
+      ) {
+        setRole("teacher");
+        setPassword("Teacher@123");
       } else {
-        setRole('student');
-        setPassword('Student@123');
+        setRole("student");
+        setPassword("Student@123");
       }
     }
   }, [initialEmail]);
 
   const handleRoleChange = (selectedRole) => {
     setRole(selectedRole);
-    setErrorMessage('');
-    if (selectedRole === 'admin') {
-      setEmail('admin@smartattend.edu');
-      setPassword('Admin@123');
-    } else if (selectedRole === 'teacher') {
-      setEmail('dr.sharma@smartattend.edu');
-      setPassword('Teacher@123');
+    setErrorMessage("");
+    if (selectedRole === "admin") {
+      setEmail("admin@smartattend.edu");
+      setPassword("Admin@123");
+    } else if (selectedRole === "teacher") {
+      setEmail("dr.sharma@smartattend.edu");
+      setPassword("Teacher@123");
     } else {
-      setEmail('kabir.mehta@smartattend.edu');
-      setPassword('Student@123');
+      setEmail("kabir.mehta@smartattend.edu");
+      setPassword("Student@123");
     }
   };
 
   const setDemoUser = (userType) => {
-    setErrorMessage('');
-    if (userType === 'at-risk') {
-      setRole('student');
-      setEmail('kabir.mehta@smartattend.edu');
-      setPassword('Student@123');
-    } else if (userType === 'good-standing') {
-      setRole('student');
-      setEmail('aravind.swamy@smartattend.edu');
-      setPassword('Student@123');
-    } else if (userType === 'teacher-approved') {
-      setRole('teacher');
-      setEmail('dr.sharma@smartattend.edu');
-      setPassword('Teacher@123');
-    } else if (userType === 'teacher-pending') {
-      setRole('teacher');
-      setEmail('dr.sen@smartattend.edu');
-      setPassword('Teacher@123');
-    } else if (userType === 'admin') {
-      setRole('admin');
-      setEmail('admin@smartattend.edu');
-      setPassword('Admin@123');
+    setErrorMessage("");
+    if (userType === "at-risk") {
+      setRole("student");
+      setEmail("kabir.mehta@smartattend.edu");
+      setPassword("Student@123");
+    } else if (userType === "good-standing") {
+      setRole("student");
+      setEmail("aravind.swamy@smartattend.edu");
+      setPassword("Student@123");
+    } else if (userType === "teacher-approved") {
+      setRole("teacher");
+      setEmail("dr.sharma@smartattend.edu");
+      setPassword("Teacher@123");
+    } else if (userType === "teacher-pending") {
+      setRole("teacher");
+      setEmail("dr.sen@smartattend.edu");
+      setPassword("Teacher@123");
+    } else if (userType === "admin") {
+      setRole("admin");
+      setEmail("admin@smartattend.edu");
+      setPassword("Admin@123");
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMessage('Please provide both email and password.');
+      setErrorMessage("Please provide both email and password.");
       return;
     }
 
     setLoading(true);
-    setErrorMessage('');
+    setErrorMessage("");
 
     try {
       const res = await login(email, password);
-      toast.success(res.message || 'Logged in successfully!');
+      toast.success(res.message || "Logged in successfully!");
 
-      const redirectUrl = searchParams.get('redirect');
-      if (redirectUrl && redirectUrl.startsWith('/')) {
+      const redirectUrl = searchParams.get("redirect");
+      if (redirectUrl && redirectUrl.startsWith("/")) {
         navigate(redirectUrl, { replace: true });
         return;
       }
 
-      if (res.user.role === 'student') {
-        navigate('/student/dashboard');
-      } else if (res.user.role === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else if (res.user.role === 'admin') {
-        navigate('/admin/dashboard');
+      if (res.user.role === "student") {
+        navigate("/student/dashboard");
+      } else if (res.user.role === "teacher") {
+        navigate("/teacher/dashboard");
+      } else if (res.user.role === "admin") {
+        navigate("/admin/dashboard");
       } else {
-        navigate('/');
+        navigate("/");
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Invalid credentials.');
+      setErrorMessage(err.message || "Invalid credentials.");
     } finally {
       setLoading(false);
     }
@@ -116,12 +130,16 @@ export default function Login() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative selection:bg-brand-500 selection:text-white">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Brand Header */}
-        <Link to="/" className="flex items-center justify-center gap-2.5 mb-6 group">
+        <Link
+          to="/"
+          className="flex items-center justify-center gap-2.5 mb-6 group"
+        >
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-teal-500 flex items-center justify-center text-white shadow-xl shadow-brand-500/25 group-hover:scale-105 transition-transform">
             <GraduationCap className="w-7 h-7" />
           </div>
           <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Smart<span className="text-brand-600 dark:text-brand-400">Attend</span>
+            Smart
+            <span className="text-brand-600 dark:text-brand-400">Attend</span>
           </span>
         </Link>
 
@@ -139,33 +157,33 @@ export default function Login() {
           <div className="mb-6 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl flex gap-1">
             <button
               type="button"
-              onClick={() => handleRoleChange('student')}
+              onClick={() => handleRoleChange("student")}
               className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                role === 'student'
-                  ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                role === "student"
+                  ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
               Student
             </button>
             <button
               type="button"
-              onClick={() => handleRoleChange('teacher')}
+              onClick={() => handleRoleChange("teacher")}
               className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                role === 'teacher'
-                  ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                role === "teacher"
+                  ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
               Teacher
             </button>
             <button
               type="button"
-              onClick={() => handleRoleChange('admin')}
+              onClick={() => handleRoleChange("admin")}
               className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                role === 'admin'
-                  ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                role === "admin"
+                  ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
               Admin
@@ -222,7 +240,7 @@ export default function Login() {
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -234,7 +252,11 @@ export default function Login() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -263,35 +285,35 @@ export default function Login() {
             <div className="grid grid-cols-2 gap-1.5 text-[11px]">
               <button
                 type="button"
-                onClick={() => setDemoUser('at-risk')}
+                onClick={() => setDemoUser("at-risk")}
                 className="p-1.5 text-left font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 transition-colors"
               >
                 🔴 Student (&lt;75% Alert)
               </button>
               <button
                 type="button"
-                onClick={() => setDemoUser('good-standing')}
+                onClick={() => setDemoUser("good-standing")}
                 className="p-1.5 text-left font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 transition-colors"
               >
                 🟢 Student (Safe 90%)
               </button>
               <button
                 type="button"
-                onClick={() => setDemoUser('teacher-approved')}
+                onClick={() => setDemoUser("teacher-approved")}
                 className="p-1.5 text-left font-semibold rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 transition-colors"
               >
                 👨‍🏫 Teacher (Dr. Sharma)
               </button>
               <button
                 type="button"
-                onClick={() => setDemoUser('teacher-pending')}
+                onClick={() => setDemoUser("teacher-pending")}
                 className="p-1.5 text-left font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 transition-colors"
               >
                 ⏳ Teacher (Pending)
               </button>
               <button
                 type="button"
-                onClick={() => setDemoUser('admin')}
+                onClick={() => setDemoUser("admin")}
                 className="col-span-2 p-1.5 text-center font-semibold rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 transition-colors"
               >
                 👑 Administrator
@@ -301,8 +323,11 @@ export default function Login() {
 
           {/* Registration Link */}
           <div className="mt-6 text-center text-xs text-slate-500">
-            Don't have an account yet?{' '}
-            <Link to="/register" className="font-bold text-brand-600 dark:text-brand-400 hover:underline">
+            Don't have an account yet?{" "}
+            <Link
+              to="/register"
+              className="font-bold text-brand-600 dark:text-brand-400 hover:underline"
+            >
               Create account
             </Link>
           </div>

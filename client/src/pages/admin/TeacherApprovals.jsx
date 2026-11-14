@@ -1,7 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { UserCheck, CheckCircle2, XCircle, RefreshCw, Mail, Calendar, Shield } from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import {
+  UserCheck,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Mail,
+  Calendar,
+  Shield,
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function TeacherApprovals() {
   const [pendingTeachers, setPendingTeachers] = useState([]);
@@ -11,10 +19,10 @@ export default function TeacherApprovals() {
   const fetchPending = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/pending-teachers');
+      const res = await api.get("/admin/pending-teachers");
       setPendingTeachers(res.pendingTeachers || []);
     } catch (err) {
-      toast.error('Failed to load pending teachers.');
+      toast.error("Failed to load pending teachers.");
     } finally {
       setLoading(false);
     }
@@ -31,14 +39,19 @@ export default function TeacherApprovals() {
       toast.success(res.message || `Teacher ${name} approved!`);
       setPendingTeachers((prev) => prev.filter((t) => t._id !== id));
     } catch (err) {
-      toast.error(err.message || 'Failed to approve teacher.');
+      toast.error(err.message || "Failed to approve teacher.");
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleReject = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to reject the teacher registration for ${name}?`)) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to reject the teacher registration for ${name}?`,
+      )
+    )
+      return;
 
     setProcessingId(id);
     try {
@@ -46,7 +59,7 @@ export default function TeacherApprovals() {
       toast.success(res.message || `Teacher ${name} rejected.`);
       setPendingTeachers((prev) => prev.filter((t) => t._id !== id));
     } catch (err) {
-      toast.error(err.message || 'Failed to reject teacher.');
+      toast.error(err.message || "Failed to reject teacher.");
     } finally {
       setProcessingId(null);
     }
@@ -60,7 +73,8 @@ export default function TeacherApprovals() {
             Teacher & Faculty Approvals
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Review and grant access to instructors before they can log in and manage classes
+            Review and grant access to instructors before they can log in and
+            manage classes
           </p>
         </div>
 
@@ -86,7 +100,8 @@ export default function TeacherApprovals() {
               Approval Queue Clear
             </p>
             <p className="mt-1 text-slate-400 max-w-sm mx-auto">
-              All faculty registrations have been reviewed. New teacher registrations will appear here for verification.
+              All faculty registrations have been reviewed. New teacher
+              registrations will appear here for verification.
             </p>
           </div>
         ) : (
@@ -112,7 +127,8 @@ export default function TeacherApprovals() {
                     </p>
                     <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      Registered on {new Date(teacher.createdAt).toLocaleDateString()}
+                      Registered on{" "}
+                      {new Date(teacher.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

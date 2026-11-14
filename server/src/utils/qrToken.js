@@ -1,9 +1,13 @@
-import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
-import { getQrSecret, getDefaultRotationInterval, getClientUrl } from '../config/env.js';
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import {
+  getQrSecret,
+  getDefaultRotationInterval,
+  getClientUrl,
+} from "../config/env.js";
 
 // Unambiguous 32-character alphabet (excludes confusing digits/letters 0, O, 1, I)
-export const UNAMBIGUOUS_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+export const UNAMBIGUOUS_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 /**
  * Compute the discrete time window index for a given timestamp
@@ -24,12 +28,17 @@ export function getWindowIndex(timestamp = Date.now(), intervalSeconds = 30) {
  * @param {string} [secret]
  * @returns {string} 6-character uppercase alphanumeric code
  */
-export function deriveWindowCode(sessionId, windowIndex, secret = getQrSecret()) {
-  const hmac = crypto.createHmac('sha256', secret)
+export function deriveWindowCode(
+  sessionId,
+  windowIndex,
+  secret = getQrSecret(),
+) {
+  const hmac = crypto
+    .createHmac("sha256", secret)
     .update(`${String(sessionId)}:${windowIndex}`)
     .digest();
 
-  let code = '';
+  let code = "";
   for (let i = 0; i < 6; i++) {
     code += UNAMBIGUOUS_ALPHABET[hmac[i] % UNAMBIGUOUS_ALPHABET.length];
   }
@@ -45,9 +54,17 @@ export function deriveWindowCode(sessionId, windowIndex, secret = getQrSecret())
  * @param {string} [baseUrl]
  * @returns {object} { code, qrPayload, windowStart, expiresAt, serverTime, intervalSeconds }
  */
-export function generateWindowSessionData(sessionOrId, intervalSeconds, baseUrl) {
-  const sessionId = sessionOrId && sessionOrId._id ? sessionOrId._id : sessionOrId;
-  const interval = Math.max(5, Number(intervalSeconds) || getDefaultRotationInterval());
+export function generateWindowSessionData(
+  sessionOrId,
+  intervalSeconds,
+  baseUrl,
+) {
+  const sessionId =
+    sessionOrId && sessionOrId._id ? sessionOrId._id : sessionOrId;
+  const interval = Math.max(
+    5,
+    Number(intervalSeconds) || getDefaultRotationInterval(),
+  );
   const now = Date.now();
   const windowIndex = getWindowIndex(now, interval);
   const code = deriveWindowCode(sessionId, windowIndex);
@@ -55,7 +72,7 @@ export function generateWindowSessionData(sessionOrId, intervalSeconds, baseUrl)
   const expiresAt = (windowIndex + 1) * interval * 1000;
 
   // Short URL payload under 100 chars: https://<domain>/scan?s=<sessionId>&c=<code>
-  const cleanBase = (baseUrl || getClientUrl()).replace(/\/$/, '');
+  const cleanBase = (baseUrl || getClientUrl()).replace(/\/$/, "");
   const qrPayload = `${cleanBase}/scan?s=${sessionId}&c=${code}`;
 
   return {
@@ -79,17 +96,28 @@ export function generateWindowSessionData(sessionOrId, intervalSeconds, baseUrl)
  * @param {number} [now=Date.now()]
  * @returns {{ valid: boolean, isPreviousGrace?: boolean, windowIndex?: number, reason?: string }}
  */
-export function validateSessionCode(sessionId, submittedCode, intervalSeconds = getDefaultRotationInterval(), now = Date.now()) {
-  if (!submittedCode || typeof submittedCode !== 'string') {
-    return { valid: false, reason: 'Session attendance code is required.' };
+export function validateSessionCode(
+  sessionId,
+  submittedCode,
+  intervalSeconds = getDefaultRotationInterval(),
+  now = Date.now(),
+) {
+  if (!submittedCode || typeof submittedCode !== "string") {
+    return { valid: false, reason: "Session attendance code is required." };
   }
 
   const cleanCode = submittedCode.trim().toUpperCase();
   if (cleanCode.length !== 6) {
-    return { valid: false, reason: 'Session attendance code must be 6 characters.' };
+    return {
+      valid: false,
+      reason: "Session attendance code must be 6 characters.",
+    };
   }
 
-  const interval = Math.max(5, Number(intervalSeconds) || getDefaultRotationInterval());
+  const interval = Math.max(
+    5,
+    Number(intervalSeconds) || getDefaultRotationInterval(),
+  );
   const currentWindow = getWindowIndex(now, interval);
 
   // 1. Check current active window
@@ -108,7 +136,8 @@ export function validateSessionCode(sessionId, submittedCode, intervalSeconds = 
   // 3. Rejected - expired or incorrect
   return {
     valid: false,
-    reason: 'This attendance code has expired. Please enter or scan the refreshed code on the screen.',
+    reason:
+      "This attendance code has expired. Please enter or scan the refreshed code on the screen.",
   };
 }
 
@@ -117,7 +146,7 @@ export function validateSessionCode(sessionId, submittedCode, intervalSeconds = 
 // ---------------------------------------------------------------------------
 
 export function generateSignedQrToken(session, expiresInSeconds = 30) {
-  const nonce = crypto.randomBytes(8).toString('hex');
+  const nonce = crypto.randomBytes(8).toString("hex");
   const payload = {
     sessionId: String(session._id),
     courseId: String(session.course?._id || session.course),
@@ -140,20 +169,22 @@ export function generateSignedQrToken(session, expiresInSeconds = 30) {
 
 export function verifyQrToken(token) {
   if (!token) {
-    throw new Error('QR token is missing.');
+    throw new Error("QR token is missing.");
   }
 
   try {
     const decoded = jwt.verify(token, getQrSecret());
     return decoded;
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      const error = new Error('This QR code has expired. Please scan the current refreshed code on the screen.');
-      error.code = 'QR_EXPIRED';
+    if (err.name === "TokenExpiredError") {
+      const error = new Error(
+        "This QR code has expired. Please scan the current refreshed code on the screen.",
+      );
+      error.code = "QR_EXPIRED";
       throw error;
     }
-    const error = new Error('Invalid or tampered QR code token.');
-    error.code = 'QR_INVALID';
+    const error = new Error("Invalid or tampered QR code token.");
+    error.code = "QR_INVALID";
     throw error;
   }
 }

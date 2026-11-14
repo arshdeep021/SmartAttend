@@ -1,31 +1,38 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { GraduationCap, Mail, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import { api } from '../../api/client.js';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  GraduationCap,
+  Mail,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { api } from "../../api/client.js";
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [devResetLink, setDevResetLink] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState("");
+  const [devResetLink, setDevResetLink] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) return;
 
     setLoading(true);
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
 
     try {
-      const res = await api.post('/auth/forgot-password', { email });
+      const res = await api.post("/auth/forgot-password", { email });
       setMessage(res.message);
       if (res.devResetLink) {
         setDevResetLink(res.devResetLink);
       }
     } catch (err) {
-      setError(err.message || 'Failed to dispatch reset link.');
+      setError(err.message || "Failed to dispatch reset link.");
     } finally {
       setLoading(false);
     }
@@ -39,14 +46,16 @@ export default function ForgotPassword() {
             <GraduationCap className="w-7 h-7" />
           </div>
           <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Smart<span className="text-brand-600 dark:text-brand-400">Attend</span>
+            Smart
+            <span className="text-brand-600 dark:text-brand-400">Attend</span>
           </span>
         </Link>
         <h2 className="text-center text-2xl font-extrabold text-slate-900 dark:text-white">
           Reset your password
         </h2>
         <p className="mt-1 text-center text-xs text-slate-500">
-          Enter your registered email address and we'll dispatch a secure recovery link.
+          Enter your registered email address and we'll dispatch a secure
+          recovery link.
         </p>
       </div>
 
@@ -108,7 +117,7 @@ export default function ForgotPassword() {
               disabled={loading}
               className="w-full py-3 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
             >
-              {loading ? 'Dispatching...' : 'Send Recovery Link'}
+              {loading ? "Dispatching..." : "Send Recovery Link"}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

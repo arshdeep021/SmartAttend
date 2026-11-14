@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   FileBarChart,
   Download,
@@ -10,26 +10,26 @@ import {
   Search,
   Filter,
   RefreshCw,
-} from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function TeacherReports() {
   const [courses, setCourses] = useState([]);
-  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState("");
   const [rosterData, setRosterData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sendingAlerts, setSendingAlerts] = useState(false);
 
   // Audit Edit modal
   const [editingRecord, setEditingRecord] = useState(null);
-  const [newStatus, setNewStatus] = useState('present');
-  const [auditReason, setAuditReason] = useState('');
+  const [newStatus, setNewStatus] = useState("present");
+  const [auditReason, setAuditReason] = useState("");
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
   const fetchCourses = async () => {
     try {
-      const res = await api.get('/courses');
+      const res = await api.get("/courses");
       const list = res.courses || [];
       setCourses(list);
       if (list.length > 0) {
@@ -37,7 +37,7 @@ export default function TeacherReports() {
         fetchRoster(list[0]._id);
       }
     } catch (err) {
-      toast.error('Failed to load courses.');
+      toast.error("Failed to load courses.");
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export default function TeacherReports() {
       const res = await api.get(`/courses/${courseId}/roster`);
       setRosterData(res.roster || []);
     } catch (err) {
-      toast.error('Failed to load roster report.');
+      toast.error("Failed to load roster report.");
     } finally {
       setLoading(false);
     }
@@ -67,12 +67,15 @@ export default function TeacherReports() {
   const handleSendLowAttendanceReminders = async () => {
     setSendingAlerts(true);
     try {
-      const res = await api.post('/notifications/send-low-attendance-reminders', {
-        courseId: selectedCourseId,
-      });
-      toast.success(res.message || 'Reminders dispatched to at-risk students!');
+      const res = await api.post(
+        "/notifications/send-low-attendance-reminders",
+        {
+          courseId: selectedCourseId,
+        },
+      );
+      toast.success(res.message || "Reminders dispatched to at-risk students!");
     } catch (err) {
-      toast.error(err.message || 'Failed to dispatch reminders.');
+      toast.error(err.message || "Failed to dispatch reminders.");
     } finally {
       setSendingAlerts(false);
     }
@@ -81,30 +84,31 @@ export default function TeacherReports() {
   const handleExportCSV = () => {
     if (rosterData.length === 0) return;
     const currentCourse = courses.find((c) => c._id === selectedCourseId);
-    let csv = 'Roll No,Student Name,Email,Department,Attended,Total Sessions,Percentage,Status,Classes Needed\n';
+    let csv =
+      "Roll No,Student Name,Email,Department,Attended,Total Sessions,Percentage,Status,Classes Needed\n";
 
     rosterData.forEach((r) => {
-      const roll = r.student?.rollNo || '';
-      const name = `"${r.student?.name || ''}"`;
-      const email = r.student?.email || '';
-      const dept = r.student?.department || '';
+      const roll = r.student?.rollNo || "";
+      const name = `"${r.student?.name || ""}"`;
+      const email = r.student?.email || "";
+      const dept = r.student?.department || "";
       const att = r.attendance?.attended || 0;
       const total = r.attendance?.totalConducted || 0;
       const pct = r.attendance?.percentage || 0;
-      const status = r.attendance?.isAtRisk ? 'AT RISK (<75%)' : 'ELIGIBLE';
+      const status = r.attendance?.isAtRisk ? "AT RISK (<75%)" : "ELIGIBLE";
       const needed = r.attendance?.classesToRecover || 0;
       csv += `${roll},${name},${email},${dept},${att},${total},${pct}%,${status},${needed}\n`;
     });
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `${currentCourse?.code || 'course'}_attendance_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${currentCourse?.code || "course"}_attendance_report_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast.success('Report CSV exported successfully!');
+    toast.success("Report CSV exported successfully!");
   };
 
   const atRiskStudents = rosterData.filter((r) => r.attendance?.isAtRisk);
@@ -119,7 +123,8 @@ export default function TeacherReports() {
             Course Attendance Reports & Analytics
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Official department compliance logs, eligibility tracking & bulk warning dispatches
+            Official department compliance logs, eligibility tracking & bulk
+            warning dispatches
           </p>
         </div>
 
@@ -154,7 +159,9 @@ export default function TeacherReports() {
       {/* Course Selector Bar */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-bold text-slate-400 uppercase">Select Course:</span>
+          <span className="text-xs font-bold text-slate-400 uppercase">
+            Select Course:
+          </span>
           <select
             value={selectedCourseId}
             onChange={(e) => handleCourseChange(e.target.value)}
@@ -171,7 +178,8 @@ export default function TeacherReports() {
         {currentCourse && (
           <div className="flex items-center gap-4 text-xs">
             <span className="text-slate-500">
-              Total Sessions Conducted: <strong>{rosterData[0]?.attendance?.totalConducted || 0}</strong>
+              Total Sessions Conducted:{" "}
+              <strong>{rosterData[0]?.attendance?.totalConducted || 0}</strong>
             </span>
             <span className="text-slate-500">
               Enrolled: <strong>{rosterData.length}</strong>
@@ -189,10 +197,13 @@ export default function TeacherReports() {
           <AlertTriangle className="w-6 h-6 text-red-600 shrink-0 mt-0.5 animate-pulse" />
           <div className="flex-1">
             <h3 className="font-bold text-sm text-red-900 dark:text-red-200">
-              {atRiskStudents.length} Student(s) Currently Below 75% Mandatory Attendance
+              {atRiskStudents.length} Student(s) Currently Below 75% Mandatory
+              Attendance
             </h3>
             <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-              These students are at risk of exam debarment. Click "Notify At-Risk Students" above to dispatch high-priority warning notifications and emails.
+              These students are at risk of exam debarment. Click "Notify
+              At-Risk Students" above to dispatch high-priority warning
+              notifications and emails.
             </p>
           </div>
         </div>
@@ -201,9 +212,13 @@ export default function TeacherReports() {
       {/* Detailed Roster Report Table */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-slate-400 text-xs">Loading report...</div>
+          <div className="py-16 text-center text-slate-400 text-xs">
+            Loading report...
+          </div>
         ) : rosterData.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 text-xs">No records available.</div>
+          <div className="py-16 text-center text-slate-400 text-xs">
+            No records available.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -227,28 +242,31 @@ export default function TeacherReports() {
                       key={r.student?._id}
                       className={`transition-colors ${
                         isAtRisk
-                          ? 'bg-red-50/40 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/40'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                          ? "bg-red-50/40 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/40"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-800/30"
                       }`}
                     >
                       <td className="px-6 py-4 font-mono font-bold text-brand-600 dark:text-brand-400">
-                        {r.student?.rollNo || '---'}
+                        {r.student?.rollNo || "---"}
                       </td>
                       <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
                         {r.student?.name}
-                        <p className="text-[11px] font-normal text-slate-400">{r.student?.email}</p>
+                        <p className="text-[11px] font-normal text-slate-400">
+                          {r.student?.email}
+                        </p>
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                        {r.attendance?.attended || 0} of {r.attendance?.totalConducted || 0} classes
+                        {r.attendance?.attended || 0} of{" "}
+                        {r.attendance?.totalConducted || 0} classes
                       </td>
                       <td className="px-6 py-4">
                         <span
                           className={`font-black text-xs px-2.5 py-1 rounded-md ${
                             isAtRisk
-                              ? 'bg-red-600 text-white shadow-sm shadow-red-500/20 animate-pulse'
+                              ? "bg-red-600 text-white shadow-sm shadow-red-500/20 animate-pulse"
                               : isApproaching
-                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                           }`}
                         >
                           {r.attendance?.percentage || 0}%
@@ -257,7 +275,8 @@ export default function TeacherReports() {
                       <td className="px-6 py-4 font-semibold">
                         {isAtRisk ? (
                           <span className="text-red-600 dark:text-red-400 font-bold">
-                            +{r.attendance?.classesToRecover} consecutive classes
+                            +{r.attendance?.classesToRecover} consecutive
+                            classes
                           </span>
                         ) : (
                           <span className="text-slate-500">

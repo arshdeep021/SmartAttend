@@ -1,9 +1,22 @@
-import React, { useEffect } from 'react';
-import { useNotifications } from '../../context/NotificationContext.jsx';
-import { Bell, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert } from 'lucide-react';
+import React, { useEffect } from "react";
+import { useNotifications } from "../../context/NotificationContext.jsx";
+import {
+  Bell,
+  AlertTriangle,
+  Sparkles,
+  Check,
+  CheckCircle2,
+  ShieldAlert,
+} from "lucide-react";
 
 export default function NotificationsPage() {
-  const { notifications, loading, fetchNotifications, markAsRead, markAllAsRead } = useNotifications();
+  const {
+    notifications,
+    loading,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
 
   useEffect(() => {
     fetchNotifications();
@@ -34,7 +47,9 @@ export default function NotificationsPage() {
 
       <div className="space-y-3">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-xs">Loading notifications...</div>
+          <div className="p-12 text-center text-slate-400 text-xs">
+            Loading notifications...
+          </div>
         ) : notifications.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 text-center text-slate-400 text-xs">
             <Bell className="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-700" />
@@ -42,7 +57,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           notifications.map((n) => {
-            const isWarning = n.type === 'low_attendance_warning';
+            const isWarning = n.type === "low_attendance_warning";
 
             return (
               <div
@@ -50,19 +65,23 @@ export default function NotificationsPage() {
                 className={`p-5 rounded-2xl border transition-all flex items-start gap-4 ${
                   !n.read
                     ? isWarning
-                      ? 'bg-red-50/70 dark:bg-red-950/30 border-red-300 dark:border-red-900/60 shadow-sm'
-                      : 'bg-brand-50/50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-900/50 shadow-sm'
-                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
+                      ? "bg-red-50/70 dark:bg-red-950/30 border-red-300 dark:border-red-900/60 shadow-sm"
+                      : "bg-brand-50/50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-900/50 shadow-sm"
+                    : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800"
                 }`}
               >
                 <div
                   className={`p-2.5 rounded-xl shrink-0 ${
                     isWarning
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-brand-600 text-white'
+                      ? "bg-red-500 text-white animate-pulse"
+                      : "bg-brand-600 text-white"
                   }`}
                 >
-                  {isWarning ? <ShieldAlert className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+                  {isWarning ? (
+                    <ShieldAlert className="w-5 h-5" />
+                  ) : (
+                    <Sparkles className="w-5 h-5" />
+                  )}
                 </div>
 
                 <div className="flex-1">
@@ -71,7 +90,11 @@ export default function NotificationsPage() {
                       {n.title}
                     </h3>
                     <span className="text-[11px] text-slate-400">
-                      {new Date(n.createdAt).toLocaleDateString()} &bull; {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(n.createdAt).toLocaleDateString()} &bull;{" "}
+                      {new Date(n.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
 

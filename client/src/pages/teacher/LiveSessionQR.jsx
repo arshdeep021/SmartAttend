@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Radio,
   Maximize2,
@@ -15,18 +15,18 @@ import {
   RefreshCw,
   Check,
   ChevronLeft,
-} from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function LiveSessionQR() {
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get('sessionId');
+  const sessionId = searchParams.get("sessionId");
   const navigate = useNavigate();
 
   const [session, setSession] = useState(null);
-  const [code, setCode] = useState('');
-  const [qrPayload, setQrPayload] = useState('');
+  const [code, setCode] = useState("");
+  const [qrPayload, setQrPayload] = useState("");
   const [intervalSeconds, setIntervalSeconds] = useState(30);
   const [expiresAt, setExpiresAt] = useState(0);
   const [serverOffset, setServerOffset] = useState(0);
@@ -40,7 +40,7 @@ export default function LiveSessionQR() {
   // Manual mark modal state
   const [showManualModal, setShowManualModal] = useState(false);
   const [roster, setRoster] = useState([]);
-  const [searchStudent, setSearchStudent] = useState('');
+  const [searchStudent, setSearchStudent] = useState("");
   const [markingStudent, setMarkingStudent] = useState(false);
 
   const isFetchingRef = useRef(false);
@@ -55,21 +55,24 @@ export default function LiveSessionQR() {
       const interval = res.intervalSeconds || 30;
 
       // ATOMIC UPDATE: Both code and QR payload set in the exact same state pass
-      setCode(res.code || '');
-      setQrPayload(res.qrPayload || '');
+      setCode(res.code || "");
+      setQrPayload(res.qrPayload || "");
       setExpiresAt(res.expiresAt || 0);
       setIntervalSeconds(interval);
       setServerOffset(offset);
       if (res.session) setSession(res.session);
 
       const nowServer = Date.now() + offset;
-      const initialRemaining = Math.max(0, Math.ceil(((res.expiresAt || 0) - nowServer) / 1000));
+      const initialRemaining = Math.max(
+        0,
+        Math.ceil(((res.expiresAt || 0) - nowServer) / 1000),
+      );
       setSecondsRemaining(initialRemaining > 0 ? initialRemaining : interval);
     } catch (err) {
-      if (err.code === 'SESSION_CLOSED' || err.message?.includes('closed')) {
-        toast.error('This attendance session has closed.');
+      if (err.code === "SESSION_CLOSED" || err.message?.includes("closed")) {
+        toast.error("This attendance session has closed.");
       } else {
-        console.error('QR refresh error:', err);
+        console.error("QR refresh error:", err);
       }
     } finally {
       isFetchingRef.current = false;
@@ -85,7 +88,7 @@ export default function LiveSessionQR() {
       setTotalEnrolled(res.totalEnrolled || 0);
       if (res.session) setSession(res.session);
     } catch (err) {
-      console.error('Attendee poll error:', err);
+      console.error("Attendee poll error:", err);
     }
   }, [sessionId]);
 
@@ -95,7 +98,7 @@ export default function LiveSessionQR() {
       const res = await api.get(`/courses/${courseId}/roster`);
       setRoster(res.roster || []);
     } catch (err) {
-      console.error('Roster error:', err);
+      console.error("Roster error:", err);
     }
   };
 
@@ -173,24 +176,31 @@ export default function LiveSessionQR() {
 
   // Close session action
   const handleCloseSession = async () => {
-    if (!window.confirm('Are you sure you want to end and close this live attendance session?')) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to end and close this live attendance session?",
+      )
+    )
+      return;
     try {
       await api.post(`/sessions/${sessionId}/close`);
-      toast.success('Live session closed.');
-      navigate('/teacher/dashboard');
+      toast.success("Live session closed.");
+      navigate("/teacher/dashboard");
     } catch (err) {
-      toast.error(err.message || 'Failed to close session.');
+      toast.error(err.message || "Failed to close session.");
     }
   };
 
   // Extend session time
   const handleExtendTime = async (mins) => {
     try {
-      await api.post(`/sessions/${sessionId}/extend`, { additionalMinutes: mins });
+      await api.post(`/sessions/${sessionId}/extend`, {
+        additionalMinutes: mins,
+      });
       toast.success(`Session extended by ${mins} minutes!`);
       fetchQrToken();
     } catch (err) {
-      toast.error(err.message || 'Failed to extend session.');
+      toast.error(err.message || "Failed to extend session.");
     }
   };
 
@@ -200,14 +210,14 @@ export default function LiveSessionQR() {
     try {
       await api.post(`/sessions/${sessionId}/manual-mark`, {
         studentId,
-        status: 'present',
-        note: 'Marked manually by instructor on projector screen',
+        status: "present",
+        note: "Marked manually by instructor on projector screen",
       });
-      toast.success('Student marked present.');
+      toast.success("Student marked present.");
       fetchAttendees();
       setShowManualModal(false);
     } catch (err) {
-      toast.error(err.message || 'Failed to mark student.');
+      toast.error(err.message || "Failed to mark student.");
     } finally {
       setMarkingStudent(false);
     }
@@ -217,17 +227,19 @@ export default function LiveSessionQR() {
   const handleUndoMark = async (studentId) => {
     try {
       await api.delete(`/sessions/${sessionId}/attendance/${studentId}`);
-      toast.success('Attendance mark revoked.');
+      toast.success("Attendance mark revoked.");
       fetchAttendees();
     } catch (err) {
-      toast.error(err.message || 'Failed to revoke attendance mark.');
+      toast.error(err.message || "Failed to revoke attendance mark.");
     }
   };
 
   if (!sessionId) {
     return (
       <div className="py-20 text-center text-slate-500">
-        <p className="text-sm font-semibold mb-3">No active live session selected.</p>
+        <p className="text-sm font-semibold mb-3">
+          No active live session selected.
+        </p>
         <Link
           to="/teacher/dashboard"
           className="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl shadow-md"
@@ -242,7 +254,9 @@ export default function LiveSessionQR() {
     return (
       <div className="py-20 text-center flex flex-col items-center">
         <RefreshCw className="w-8 h-8 text-brand-600 animate-spin mb-2" />
-        <p className="text-xs text-slate-500">Initializing Live Synchronized QR Projector...</p>
+        <p className="text-xs text-slate-500">
+          Initializing Live Synchronized QR Projector...
+        </p>
       </div>
     );
   }
@@ -250,11 +264,16 @@ export default function LiveSessionQR() {
   // Circular countdown calculations
   const countdownRadius = 18;
   const countdownCircumference = 2 * Math.PI * countdownRadius;
-  const countdownRatio = intervalSeconds > 0 ? Math.min(1, Math.max(0, secondsRemaining / intervalSeconds)) : 1;
+  const countdownRatio =
+    intervalSeconds > 0
+      ? Math.min(1, Math.max(0, secondsRemaining / intervalSeconds))
+      : 1;
   const countdownProgress = countdownRatio * countdownCircumference;
 
   return (
-    <div className={`space-y-6 ${isFullscreen ? 'p-8 bg-slate-950 text-white min-h-screen' : ''}`}>
+    <div
+      className={`space-y-6 ${isFullscreen ? "p-8 bg-slate-950 text-white min-h-screen" : ""}`}
+    >
       {/* Top Projector Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
@@ -266,13 +285,16 @@ export default function LiveSessionQR() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-ping'}`} />
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${isPaused ? "bg-amber-500" : "bg-emerald-500 animate-ping"}`}
+              />
               <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                {session?.topic || 'Live Attendance'}
+                {session?.topic || "Live Attendance"}
               </h1>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {session?.course?.code} - {session?.course?.name} &bull; Room: {session?.room}
+              {session?.course?.code} - {session?.course?.name} &bull; Room:{" "}
+              {session?.room}
             </p>
           </div>
         </div>
@@ -284,12 +306,16 @@ export default function LiveSessionQR() {
             onClick={handleTogglePause}
             className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
               isPaused
-                ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                ? "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
             }`}
           >
-            {isPaused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5" />}
-            <span>{isPaused ? 'Resume Rotation' : 'Pause Rotation'}</span>
+            {isPaused ? (
+              <Play className="w-3.5 h-3.5 fill-current" />
+            ) : (
+              <Pause className="w-3.5 h-3.5" />
+            )}
+            <span>{isPaused ? "Resume Rotation" : "Pause Rotation"}</span>
           </button>
 
           {/* Extend Time */}
@@ -316,7 +342,11 @@ export default function LiveSessionQR() {
             className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 transition-all"
             title="Toggle Projector Fullscreen"
           >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
           </button>
 
           {/* End Session Button */}
@@ -338,11 +368,11 @@ export default function LiveSessionQR() {
             <div className="flex items-center gap-2">
               <span
                 className={`px-3 py-1 text-xs font-black uppercase tracking-wider text-white rounded-full flex items-center gap-1.5 shadow-sm ${
-                  isPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'
+                  isPaused ? "bg-amber-500" : "bg-red-500 animate-pulse"
                 }`}
               >
                 <span className="w-2 h-2 rounded-full bg-white" />
-                {isPaused ? 'Rotation Frozen' : 'Live Projector'}
+                {isPaused ? "Rotation Frozen" : "Live Projector"}
               </span>
             </div>
 
@@ -363,21 +393,23 @@ export default function LiveSessionQR() {
                     cx="20"
                     cy="20"
                     r={countdownRadius}
-                    stroke={isPaused ? '#f59e0b' : '#4f46e5'}
+                    stroke={isPaused ? "#f59e0b" : "#4f46e5"}
                     strokeWidth="3.5"
                     strokeDasharray={countdownCircumference}
-                    strokeDashoffset={countdownCircumference - countdownProgress}
+                    strokeDashoffset={
+                      countdownCircumference - countdownProgress
+                    }
                     strokeLinecap="round"
                     fill="transparent"
                     className="transition-all duration-1000 ease-linear"
                   />
                 </svg>
                 <span className="absolute text-[11px] font-black text-brand-600 dark:text-brand-400">
-                  {isPaused ? '⏸' : `${secondsRemaining}s`}
+                  {isPaused ? "⏸" : `${secondsRemaining}s`}
                 </span>
               </div>
               <span className="hidden sm:inline">
-                {isPaused ? 'Paused' : `Rotates every ${intervalSeconds}s`}
+                {isPaused ? "Paused" : `Rotates every ${intervalSeconds}s`}
               </span>
             </div>
           </div>
@@ -413,10 +445,11 @@ export default function LiveSessionQR() {
               Synchronized Session PIN (6 Chars)
             </p>
             <span className="font-mono font-black text-3xl sm:text-4xl tracking-[0.3em] text-brand-600 dark:text-brand-400 select-all">
-              {code || '------'}
+              {code || "------"}
             </span>
             <p className="text-[11px] text-slate-400 mt-1">
-              Students without camera access can enter this exact 6-character code
+              Students without camera access can enter this exact 6-character
+              code
             </p>
           </div>
         </div>
@@ -429,14 +462,19 @@ export default function LiveSessionQR() {
                 <Users className="w-5 h-5 text-brand-500" />
                 Live Check-in Roster
               </h2>
-              <p className="text-xs text-slate-400">Real-time attendance stream</p>
+              <p className="text-xs text-slate-400">
+                Real-time attendance stream
+              </p>
             </div>
             <div className="text-right">
               <span className="text-xl font-extrabold text-brand-600 dark:text-brand-400 font-mono">
                 {attendees.length} / {totalEnrolled}
               </span>
               <p className="text-[10px] text-slate-400">
-                {totalEnrolled > 0 ? Math.round((attendees.length / totalEnrolled) * 100) : 0}% Present
+                {totalEnrolled > 0
+                  ? Math.round((attendees.length / totalEnrolled) * 100)
+                  : 0}
+                % Present
               </p>
             </div>
           </div>
@@ -453,8 +491,16 @@ export default function LiveSessionQR() {
                 {attendees.map((a, idx) => (
                   <motion.div
                     key={a._id}
-                    initial={{ opacity: 0, x: -20, backgroundColor: 'rgba(79, 70, 229, 0.15)' }}
-                    animate={{ opacity: 1, x: 0, backgroundColor: 'transparent' }}
+                    initial={{
+                      opacity: 0,
+                      x: -20,
+                      backgroundColor: "rgba(79, 70, 229, 0.15)",
+                    }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                      backgroundColor: "transparent",
+                    }}
                     transition={{ duration: 0.3 }}
                     className="p-3 text-xs flex items-center justify-between rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40"
                   >
@@ -464,14 +510,14 @@ export default function LiveSessionQR() {
                       </div>
                       <div>
                         <p className="font-bold text-slate-900 dark:text-white leading-tight">
-                          {a.student?.name || 'Student'}
+                          {a.student?.name || "Student"}
                         </p>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          {a.student?.rollNo || 'CS---'} &bull;{' '}
+                          {a.student?.rollNo || "CS---"} &bull;{" "}
                           {new Date(a.markedAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
                           })}
                         </p>
                       </div>
@@ -527,7 +573,9 @@ export default function LiveSessionQR() {
                   );
                 })
                 .map((r) => {
-                  const alreadyMarked = attendees.some((a) => a.student?._id === r.student?._id);
+                  const alreadyMarked = attendees.some(
+                    (a) => a.student?._id === r.student?._id,
+                  );
 
                   return (
                     <div
@@ -535,8 +583,12 @@ export default function LiveSessionQR() {
                       className="py-2.5 px-2 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-lg"
                     >
                       <div>
-                        <p className="font-bold text-slate-900 dark:text-white">{r.student?.name}</p>
-                        <p className="text-slate-400 font-mono text-[11px]">{r.student?.rollNo}</p>
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {r.student?.name}
+                        </p>
+                        <p className="text-slate-400 font-mono text-[11px]">
+                          {r.student?.rollNo}
+                        </p>
                       </div>
 
                       {alreadyMarked ? (

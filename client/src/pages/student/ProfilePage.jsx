@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext.jsx';
-import { api } from '../../api/client.js';
-import { User, Lock, Mail, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { api } from "../../api/client.js";
+import {
+  User,
+  Lock,
+  Mail,
+  Shield,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
-  const [name, setName] = useState(user?.name || '');
-  const [department, setDepartment] = useState(user?.department || '');
-  const [section, setSection] = useState(user?.section || '');
+  const [name, setName] = useState(user?.name || "");
+  const [department, setDepartment] = useState(user?.department || "");
+  const [section, setSection] = useState(user?.section || "");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
   // Change password states
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPass, setChangingPass] = useState(false);
 
   const handleProfileSubmit = async (e) => {
@@ -22,9 +29,9 @@ export default function ProfilePage() {
     setUpdatingProfile(true);
     try {
       await updateProfile({ name, department, section });
-      toast.success('Profile details updated successfully!');
+      toast.success("Profile details updated successfully!");
     } catch (err) {
-      toast.error(err.message || 'Failed to update profile.');
+      toast.error(err.message || "Failed to update profile.");
     } finally {
       setUpdatingProfile(false);
     }
@@ -33,26 +40,26 @@ export default function ProfilePage() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters.');
+      toast.error("New password must be at least 6 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match.');
+      toast.error("New passwords do not match.");
       return;
     }
 
     setChangingPass(true);
     try {
-      await api.put('/auth/change-password', {
+      await api.put("/auth/change-password", {
         currentPassword,
         newPassword,
       });
-      toast.success('Password changed successfully!');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      toast.success("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err) {
-      toast.error(err.message || 'Failed to change password.');
+      toast.error(err.message || "Failed to change password.");
     } finally {
       setChangingPass(false);
     }
@@ -65,7 +72,8 @@ export default function ProfilePage() {
           Account Settings & Profile
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Manage your personal details, academic identification, and password security
+          Manage your personal details, academic identification, and password
+          security
         </p>
       </div>
 
@@ -77,7 +85,9 @@ export default function ProfilePage() {
               <User className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Profile Details</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Profile Details
+              </h2>
               <p className="text-xs text-slate-400">Personal & academic info</p>
             </div>
           </div>
@@ -103,7 +113,7 @@ export default function ProfilePage() {
               <input
                 type="email"
                 disabled
-                value={user?.email || ''}
+                value={user?.email || ""}
                 className="w-full px-3.5 py-2.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-400 cursor-not-allowed"
               />
             </div>
@@ -116,7 +126,7 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   disabled
-                  value={user?.rollNo || ''}
+                  value={user?.rollNo || ""}
                   className="w-full px-3.5 py-2.5 text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-400 cursor-not-allowed"
                 />
               </div>
@@ -152,7 +162,7 @@ export default function ProfilePage() {
               disabled={updatingProfile}
               className="w-full mt-2 py-2.5 px-4 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-md transition-all"
             >
-              {updatingProfile ? 'Saving...' : 'Update Details'}
+              {updatingProfile ? "Saving..." : "Update Details"}
             </button>
           </form>
         </div>
@@ -164,7 +174,9 @@ export default function ProfilePage() {
               <Lock className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Change Password</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Change Password
+              </h2>
               <p className="text-xs text-slate-400">Keep your account secure</p>
             </div>
           </div>
@@ -217,7 +229,7 @@ export default function ProfilePage() {
               disabled={changingPass}
               className="w-full mt-2 py-2.5 px-4 text-xs font-bold text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 rounded-xl shadow-md transition-all"
             >
-              {changingPass ? 'Updating...' : 'Change Password'}
+              {changingPass ? "Updating..." : "Change Password"}
             </button>
           </form>
         </div>

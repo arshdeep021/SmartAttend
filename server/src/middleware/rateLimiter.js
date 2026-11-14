@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit from "express-rate-limit";
 
 /**
  * Authentication rate limiter: 10 failed/total login attempts per 15 minutes
@@ -10,13 +10,16 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    const email = req.body?.email ? String(req.body.email).toLowerCase().trim() : '';
-    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown_ip';
+    const email = req.body?.email
+      ? String(req.body.email).toLowerCase().trim()
+      : "";
+    const ip = req.ip || req.headers["x-forwarded-for"] || "unknown_ip";
     return email ? `${email}_${ip}` : ip;
   },
   message: {
     success: false,
-    message: 'Too many authentication attempts. Please wait 15 minutes before trying again.',
+    message:
+      "Too many authentication attempts. Please wait 15 minutes before trying again.",
   },
 });
 
@@ -33,11 +36,12 @@ export const attendanceMarkLimiter = rateLimit({
     if (req.user?._id) {
       return `student_${req.user._id}`;
     }
-    return req.ip || req.headers['x-forwarded-for'] || 'anonymous';
+    return req.ip || req.headers["x-forwarded-for"] || "anonymous";
   },
   message: {
     success: false,
-    message: 'Too many attendance submission attempts. Please wait 1 minute before trying again.',
+    message:
+      "Too many attendance submission attempts. Please wait 1 minute before trying again.",
   },
 });
 

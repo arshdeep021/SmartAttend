@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   GraduationCap,
   QrCode,
@@ -14,24 +14,44 @@ import {
   Radio,
   Clock,
   Sparkles,
-} from 'lucide-react';
-import { useAuth } from '../../context/AuthContext.jsx';
+} from "lucide-react";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function LandingPage() {
   const { user, isStudent, isTeacher, isAdmin } = useAuth();
 
   const getDashboardLink = () => {
-    if (isStudent) return '/student/dashboard';
-    if (isTeacher) return '/teacher/dashboard';
-    if (isAdmin) return '/admin/dashboard';
-    return '/login';
+    if (isStudent) return "/student/dashboard";
+    if (isTeacher) return "/teacher/dashboard";
+    if (isAdmin) return "/admin/dashboard";
+    return "/login";
   };
 
   const demoAccounts = [
-    { role: 'Admin', email: 'admin@smartattend.edu', pass: 'Admin@123', color: 'from-purple-500 to-indigo-600' },
-    { role: 'Teacher', email: 'dr.sharma@smartattend.edu', pass: 'Teacher@123', color: 'from-teal-500 to-emerald-600' },
-    { role: 'Student (<75% Alert)', email: 'kabir.mehta@smartattend.edu', pass: 'Student@123', color: 'from-red-500 to-rose-600' },
-    { role: 'Student (Good Standing)', email: 'aravind.swamy@smartattend.edu', pass: 'Student@123', color: 'from-blue-500 to-cyan-600' },
+    {
+      role: "Admin",
+      email: "admin@smartattend.edu",
+      pass: "Admin@123",
+      color: "from-purple-500 to-indigo-600",
+    },
+    {
+      role: "Teacher",
+      email: "dr.sharma@smartattend.edu",
+      pass: "Teacher@123",
+      color: "from-teal-500 to-emerald-600",
+    },
+    {
+      role: "Student (<75% Alert)",
+      email: "kabir.mehta@smartattend.edu",
+      pass: "Student@123",
+      color: "from-red-500 to-rose-600",
+    },
+    {
+      role: "Student (Good Standing)",
+      email: "aravind.swamy@smartattend.edu",
+      pass: "Student@123",
+      color: "from-blue-500 to-cyan-600",
+    },
   ];
 
   return (
@@ -45,7 +65,10 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                Smart<span className="text-brand-600 dark:text-brand-400">Attend</span>
+                Smart
+                <span className="text-brand-600 dark:text-brand-400">
+                  Attend
+                </span>
               </span>
               <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-md border border-brand-500/20">
                 v2.0
@@ -112,7 +135,9 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-6 text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed"
           >
-            Rotating cryptographically signed QR tokens, real-time live check-in rosters, and an unmissable automated 75% low attendance warning system.
+            Rotating cryptographically signed QR tokens, real-time live check-in
+            rosters, and an unmissable automated 75% low attendance warning
+            system.
           </motion.p>
 
           <motion.div
@@ -139,20 +164,36 @@ export default function LandingPage() {
           {/* Quick Stats Banner */}
           <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
             <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm">
-              <p className="text-2xl sm:text-3xl font-extrabold text-brand-600 dark:text-brand-400">20s</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Rotating QR Expiry</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-brand-600 dark:text-brand-400">
+                20s
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Rotating QR Expiry
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm">
-              <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">100%</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Anti-Proxy Compound Index</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                100%
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Anti-Proxy Compound Index
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm">
-              <p className="text-2xl sm:text-3xl font-extrabold text-red-600 dark:text-red-400">&lt; 75%</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Automated Warning Alert</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-red-600 dark:text-red-400">
+                &lt; 75%
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Automated Warning Alert
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm">
-              <p className="text-2xl sm:text-3xl font-extrabold text-teal-600 dark:text-teal-400">1-Click</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">CSV & PDF Reports</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-teal-600 dark:text-teal-400">
+                1-Click
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                CSV & PDF Reports
+              </p>
             </div>
           </div>
         </div>
@@ -166,7 +207,8 @@ export default function LandingPage() {
               Effortless 3-Step Workflow
             </h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Designed specifically for fast classroom check-in without taking 15 minutes of lecture time.
+              Designed specifically for fast classroom check-in without taking
+              15 minutes of lecture time.
             </p>
           </div>
 
@@ -179,7 +221,8 @@ export default function LandingPage() {
                 Teacher Starts Live Session
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Instructor selects course and projects a large rotating QR code. The token auto-refreshes every 20 seconds.
+                Instructor selects course and projects a large rotating QR code.
+                The token auto-refreshes every 20 seconds.
               </p>
             </div>
 
@@ -191,7 +234,8 @@ export default function LandingPage() {
                 Student Scans with Phone
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Student opens SmartAttend, scans the rotating screen code with their camera, and gets verified with confetti in 1 second.
+                Student opens SmartAttend, scans the rotating screen code with
+                their camera, and gets verified with confetti in 1 second.
               </p>
             </div>
 
@@ -203,7 +247,8 @@ export default function LandingPage() {
                 Live Analytics & 75% Alerts
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Percentages update immediately. Students falling below 75% receive instant unmissable alerts and recovery instructions.
+                Percentages update immediately. Students falling below 75%
+                receive instant unmissable alerts and recovery instructions.
               </p>
             </div>
           </div>
@@ -221,7 +266,8 @@ export default function LandingPage() {
               Pre-Seeded Demo Accounts
             </h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Click any account below or sign in to test the complete end-to-end functionality right away.
+              Click any account below or sign in to test the complete end-to-end
+              functionality right away.
             </p>
           </div>
 
@@ -232,7 +278,9 @@ export default function LandingPage() {
                 className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
               >
                 <div>
-                  <span className={`inline-block px-2.5 py-1 text-xs font-bold text-white rounded-lg bg-gradient-to-r ${acc.color} mb-3`}>
+                  <span
+                    className={`inline-block px-2.5 py-1 text-xs font-bold text-white rounded-lg bg-gradient-to-r ${acc.color} mb-3`}
+                  >
                     {acc.role}
                   </span>
                   <div className="space-y-1">
@@ -261,7 +309,8 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 dark:border-slate-800 py-8 text-center text-xs text-slate-500">
-        SmartAttend v2 &bull; Enterprise-grade Smart Student Attendance System &bull; Built with React, Vite, Node, Express & MongoDB.
+        SmartAttend v2 &bull; Enterprise-grade Smart Student Attendance System
+        &bull; Built with React, Vite, Node, Express & MongoDB.
       </footer>
     </div>
   );

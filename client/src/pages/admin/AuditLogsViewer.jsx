@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollText, RefreshCw, Calendar, User, ShieldAlert } from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import {
+  ScrollText,
+  RefreshCw,
+  Calendar,
+  User,
+  ShieldAlert,
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function AuditLogsViewer() {
   const [logs, setLogs] = useState([]);
@@ -18,7 +24,7 @@ export default function AuditLogsViewer() {
       setTotalPages(res.pagination?.totalPages || 1);
       setTotalCount(res.pagination?.total || 0);
     } catch (err) {
-      toast.error('Failed to load audit logs.');
+      toast.error("Failed to load audit logs.");
     } finally {
       setLoading(false);
     }
@@ -36,7 +42,8 @@ export default function AuditLogsViewer() {
             Security & Compliance Audit Trail
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Immutable log of faculty approvals, manual attendance adjustments, logins, and setting changes ({totalCount} entries)
+            Immutable log of faculty approvals, manual attendance adjustments,
+            logins, and setting changes ({totalCount} entries)
           </p>
         </div>
 
@@ -51,9 +58,13 @@ export default function AuditLogsViewer() {
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-slate-400 text-xs">Loading audit records...</div>
+          <div className="py-16 text-center text-slate-400 text-xs">
+            Loading audit records...
+          </div>
         ) : logs.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 text-xs">No audit logs recorded yet.</div>
+          <div className="py-16 text-center text-slate-400 text-xs">
+            No audit logs recorded yet.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -69,14 +80,24 @@ export default function AuditLogsViewer() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {logs.map((log) => (
-                  <tr key={log._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                  <tr
+                    key={log._id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/30"
+                  >
                     <td className="px-6 py-4 text-slate-400 whitespace-nowrap">
-                      {new Date(log.createdAt).toLocaleDateString()} {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {new Date(log.createdAt).toLocaleDateString()}{" "}
+                      {new Date(log.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </td>
 
                     <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
-                      {log.actor?.name || 'System'}
-                      <p className="text-[10px] text-slate-400 font-normal">{log.actor?.email}</p>
+                      {log.actor?.name || "System"}
+                      <p className="text-[10px] text-slate-400 font-normal">
+                        {log.actor?.email}
+                      </p>
                     </td>
 
                     <td className="px-6 py-4">
@@ -86,7 +107,8 @@ export default function AuditLogsViewer() {
                     </td>
 
                     <td className="px-6 py-4 text-slate-500 font-mono">
-                      {log.targetType} {log.targetId ? `(${log.targetId.slice(-6)})` : ''}
+                      {log.targetType}{" "}
+                      {log.targetId ? `(${log.targetId.slice(-6)})` : ""}
                     </td>
 
                     <td className="px-6 py-4 text-[11px] text-slate-600 dark:text-slate-300 max-w-xs truncate">
@@ -94,7 +116,7 @@ export default function AuditLogsViewer() {
                     </td>
 
                     <td className="px-6 py-4 text-slate-400 font-mono text-[11px]">
-                      {log.ip || '127.0.0.1'}
+                      {log.ip || "127.0.0.1"}
                     </td>
                   </tr>
                 ))}
@@ -105,7 +127,9 @@ export default function AuditLogsViewer() {
 
         {totalPages > 1 && (
           <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Page {page} of {totalPages}</span>
+            <span className="text-slate-500">
+              Page {page} of {totalPages}
+            </span>
             <div className="flex gap-2">
               <button
                 disabled={page <= 1}

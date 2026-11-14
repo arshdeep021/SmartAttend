@@ -1,21 +1,21 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const attendanceSchema = new mongoose.Schema(
   {
     session: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Session',
-      required: [true, 'Session reference is required'],
+      ref: "Session",
+      required: [true, "Session reference is required"],
     },
     student: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Student reference is required'],
+      ref: "User",
+      required: [true, "Student reference is required"],
     },
     course: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Course',
-      required: [true, 'Course reference is required'],
+      ref: "Course",
+      required: [true, "Course reference is required"],
     },
     markedAt: {
       type: Date,
@@ -23,29 +23,29 @@ const attendanceSchema = new mongoose.Schema(
     },
     method: {
       type: String,
-      enum: ['qr', 'manual', 'manual_code'],
-      default: 'qr',
+      enum: ["qr", "manual", "manual_code"],
+      default: "qr",
     },
     status: {
       type: String,
-      enum: ['present', 'late', 'absent'],
-      default: 'present',
+      enum: ["present", "late", "absent"],
+      default: "present",
     },
     ip: {
       type: String,
-      default: '',
+      default: "",
     },
     deviceInfo: {
       type: String,
-      default: '',
+      default: "",
     },
     note: {
       type: String,
-      default: '',
+      default: "",
     },
     editedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       default: null,
     },
     editedAt: {
@@ -53,7 +53,7 @@ const attendanceSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // CRITICAL UNIQUE CONSTRAINT: One attendance record per student per session!
@@ -63,4 +63,4 @@ attendanceSchema.index({ session: 1, student: 1 }, { unique: true });
 attendanceSchema.index({ student: 1, course: 1 });
 attendanceSchema.index({ course: 1, markedAt: -1 });
 
-export default mongoose.model('Attendance', attendanceSchema);
+export default mongoose.model("Attendance", attendanceSchema);

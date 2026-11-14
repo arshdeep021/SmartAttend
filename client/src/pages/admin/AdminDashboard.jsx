@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Users,
   UserCheck,
@@ -13,9 +13,9 @@ import {
   RefreshCw,
   Shield,
   ArrowRight,
-} from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function AdminDashboard() {
   const [analytics, setAnalytics] = useState(null);
@@ -23,10 +23,10 @@ export default function AdminDashboard() {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await api.get('/admin/analytics');
+      const res = await api.get("/admin/analytics");
       setAnalytics(res.analytics);
     } catch (err) {
-      toast.error('Failed to load system analytics.');
+      toast.error("Failed to load system analytics.");
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,8 @@ export default function AdminDashboard() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Institutional overview, faculty approvals, audit monitoring & system configuration
+            Institutional overview, faculty approvals, audit monitoring & system
+            configuration
           </p>
         </div>
 
@@ -69,7 +70,9 @@ export default function AdminDashboard() {
             className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 shrink-0 animate-pulse"
           >
             <UserCheck className="w-4 h-4" />
-            <span>{analytics.pendingTeachersCount} Faculty Awaiting Approval</span>
+            <span>
+              {analytics.pendingTeachersCount} Faculty Awaiting Approval
+            </span>
           </Link>
         )}
       </div>
@@ -78,53 +81,71 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">Total Students</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              Total Students
+            </span>
             <Users className="w-5 h-5 text-brand-500" />
           </div>
           <p className="text-3xl font-black text-slate-900 dark:text-white mt-2">
             {analytics?.totalStudents || 0}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Enrolled student accounts</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Enrolled student accounts
+          </p>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">Approved Faculty</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              Approved Faculty
+            </span>
             <UserCheck className="w-5 h-5 text-teal-500" />
           </div>
           <p className="text-3xl font-black text-slate-900 dark:text-white mt-2">
             {analytics?.totalTeachers || 0}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Active teaching instructors</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Active teaching instructors
+          </p>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">Courses Offered</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              Courses Offered
+            </span>
             <BookOpen className="w-5 h-5 text-indigo-500" />
           </div>
           <p className="text-3xl font-black text-slate-900 dark:text-white mt-2">
             {analytics?.totalCourses || 0}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Academic curriculums</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Academic curriculums
+          </p>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">At-Risk Instances</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              At-Risk Instances
+            </span>
             <AlertTriangle className="w-5 h-5 text-red-500" />
           </div>
           <p className="text-3xl font-black text-red-600 dark:text-red-400 mt-2">
             {analytics?.atRiskInstances || 0}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Below {analytics?.threshold || 75}% threshold</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Below {analytics?.threshold || 75}% threshold
+          </p>
         </div>
       </div>
 
       {/* System Metrics Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-500 uppercase">Conducted Lectures</span>
+          <span className="text-xs font-bold text-slate-500 uppercase">
+            Conducted Lectures
+          </span>
           <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
             {analytics?.totalSessions || 0} Sessions
           </p>
@@ -134,7 +155,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-500 uppercase">Live Right Now</span>
+          <span className="text-xs font-bold text-slate-500 uppercase">
+            Live Right Now
+          </span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {analytics?.activeSessionsCount || 0} Active Session(s)
           </p>
@@ -144,7 +167,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-500 uppercase">Configured Threshold</span>
+          <span className="text-xs font-bold text-slate-500 uppercase">
+            Configured Threshold
+          </span>
           <p className="text-2xl font-black text-brand-600 dark:text-brand-400 mt-1">
             {analytics?.threshold || 75}% Minimum
           </p>
@@ -167,7 +192,9 @@ export default function AdminDashboard() {
             Teacher Approvals
             <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
           </h3>
-          <p className="text-xs text-slate-400 mt-1">Review pending faculty registrations</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Review pending faculty registrations
+          </p>
         </Link>
 
         <Link
@@ -181,7 +208,9 @@ export default function AdminDashboard() {
             User Directory
             <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
           </h3>
-          <p className="text-xs text-slate-400 mt-1">Search, view, and manage accounts</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Search, view, and manage accounts
+          </p>
         </Link>
 
         <Link
@@ -195,7 +224,9 @@ export default function AdminDashboard() {
             System Settings
             <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
           </h3>
-          <p className="text-xs text-slate-400 mt-1">Configure threshold, QR timing & alerts</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Configure threshold, QR timing & alerts
+          </p>
         </Link>
 
         <Link
@@ -209,7 +240,9 @@ export default function AdminDashboard() {
             Audit Trail
             <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
           </h3>
-          <p className="text-xs text-slate-400 mt-1">Review manual corrections and sign-ins</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Review manual corrections and sign-ins
+          </p>
         </Link>
       </div>
     </div>

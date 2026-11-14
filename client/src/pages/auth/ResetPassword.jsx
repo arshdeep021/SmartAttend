@@ -1,48 +1,56 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { GraduationCap, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  GraduationCap,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || '';
+  const token = searchParams.get("token") || "";
 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!token) {
-      setError('Password reset token is missing from the URL.');
+      setError("Password reset token is missing from the URL.");
       return;
     }
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters.');
+      setError("Password must be at least 6 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const res = await api.post('/auth/reset-password', {
+      const res = await api.post("/auth/reset-password", {
         token,
         newPassword,
       });
-      toast.success(res.message || 'Password reset successfully!');
-      navigate('/login');
+      toast.success(res.message || "Password reset successfully!");
+      navigate("/login");
     } catch (err) {
-      setError(err.message || 'Invalid or expired reset token.');
+      setError(err.message || "Invalid or expired reset token.");
     } finally {
       setLoading(false);
     }
@@ -56,7 +64,8 @@ export default function ResetPassword() {
             <GraduationCap className="w-7 h-7" />
           </div>
           <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Smart<span className="text-brand-600 dark:text-brand-400">Attend</span>
+            Smart
+            <span className="text-brand-600 dark:text-brand-400">Attend</span>
           </span>
         </Link>
         <h2 className="text-center text-2xl font-extrabold text-slate-900 dark:text-white">
@@ -83,7 +92,7 @@ export default function ResetPassword() {
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -95,7 +104,11 @@ export default function ResetPassword() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -105,7 +118,7 @@ export default function ResetPassword() {
                 Confirm Password
               </label>
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -119,7 +132,7 @@ export default function ResetPassword() {
               disabled={loading}
               className="w-full py-3 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
             >
-              {loading ? 'Updating Password...' : 'Save New Password'}
+              {loading ? "Updating Password..." : "Save New Password"}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

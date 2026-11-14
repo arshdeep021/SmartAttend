@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const systemSettingSchema = new mongoose.Schema(
   {
@@ -6,7 +6,7 @@ const systemSettingSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      default: 'global_config',
+      default: "global_config",
     },
     attendanceThreshold: {
       type: Number,
@@ -46,10 +46,10 @@ const systemSettingSchema = new mongoose.Schema(
     },
     institutionName: {
       type: String,
-      default: 'Apex Institute of Technology',
+      default: "Apex Institute of Technology",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default mongoose.model('SystemSetting', systemSettingSchema);
+export default mongoose.model("SystemSetting", systemSettingSchema);

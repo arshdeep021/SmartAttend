@@ -1,11 +1,11 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
 
 export default function ProgressRing({
   percentage = 100,
   size = 180,
   strokeWidth = 14,
-  label = 'Overall Attendance',
+  label = "Overall Attendance",
   threshold = 75,
   showLabel = true,
 }) {
@@ -14,23 +14,29 @@ export default function ProgressRing({
   const clamped = Math.min(100, Math.max(0, percentage));
   const offset = circumference - (clamped / 100) * circumference;
 
-  let strokeColor = '#10b981'; // Green (>=85%)
-  let statusBadge = 'Excellent Standing';
-  let badgeColor = 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+  let strokeColor = "#10b981"; // Green (>=85%)
+  let statusBadge = "Excellent Standing";
+  let badgeColor =
+    "text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800";
 
   if (clamped < threshold) {
-    strokeColor = '#ef4444'; // Red (<75%)
-    statusBadge = 'Critical: Below 75%';
-    badgeColor = 'text-red-700 bg-red-50 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800 animate-pulse';
+    strokeColor = "#ef4444"; // Red (<75%)
+    statusBadge = "Critical: Below 75%";
+    badgeColor =
+      "text-red-700 bg-red-50 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800 animate-pulse";
   } else if (clamped < threshold + 10) {
-    strokeColor = '#f59e0b'; // Amber (75-84%)
-    statusBadge = 'Approaching Threshold';
-    badgeColor = 'text-amber-700 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+    strokeColor = "#f59e0b"; // Amber (75-84%)
+    statusBadge = "Approaching Threshold";
+    badgeColor =
+      "text-amber-700 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800";
   }
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <div
+        className="relative flex items-center justify-center"
+        style={{ width: size, height: size }}
+      >
         <svg width={size} height={size} className="transform -rotate-90">
           {/* Background circle track */}
           <circle
@@ -52,7 +58,7 @@ export default function ProgressRing({
             strokeDasharray={circumference}
             strokeDashoffset={circumference}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.2, ease: 'easeOut' }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
             strokeLinecap="round"
             fill="transparent"
           />
@@ -76,8 +82,12 @@ export default function ProgressRing({
 
       {showLabel && (
         <div className="mt-3 text-center">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</p>
-          <span className={`inline-block mt-1 px-2.5 py-0.5 text-xs font-medium rounded-full border ${badgeColor}`}>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {label}
+          </p>
+          <span
+            className={`inline-block mt-1 px-2.5 py-0.5 text-xs font-medium rounded-full border ${badgeColor}`}
+          >
             {statusBadge}
           </span>
         </div>

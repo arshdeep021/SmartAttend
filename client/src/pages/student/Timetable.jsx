@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, BookOpen, RefreshCw } from 'lucide-react';
-import { api } from '../../api/client.js';
+import React, { useState, useEffect } from "react";
+import { Calendar, Clock, MapPin, BookOpen, RefreshCw } from "lucide-react";
+import { api } from "../../api/client.js";
 
 export default function Timetable() {
   const [courses, setCourses] = useState([]);
@@ -9,7 +9,7 @@ export default function Timetable() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.get('/courses');
+        const res = await api.get("/courses");
         setCourses(res.courses || []);
       } catch (err) {
         console.error(err);
@@ -20,7 +20,7 @@ export default function Timetable() {
     load();
   }, []);
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
   if (loading) {
     return (
@@ -58,7 +58,9 @@ export default function Timetable() {
           });
 
           // Sort by start time
-          dayClasses.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
+          dayClasses.sort((a, b) =>
+            a.slot.startTime.localeCompare(b.slot.startTime),
+          );
 
           return (
             <div
@@ -66,15 +68,20 @@ export default function Timetable() {
               className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 flex flex-col"
             >
               <div className="pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900 dark:text-white">{day}</span>
+                <span className="font-bold text-sm text-slate-900 dark:text-white">
+                  {day}
+                </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                  {dayClasses.length} {dayClasses.length === 1 ? 'class' : 'classes'}
+                  {dayClasses.length}{" "}
+                  {dayClasses.length === 1 ? "class" : "classes"}
                 </span>
               </div>
 
               <div className="mt-3 space-y-3 flex-1">
                 {dayClasses.length === 0 ? (
-                  <div className="p-4 text-center text-slate-400 text-xs">No lectures scheduled.</div>
+                  <div className="p-4 text-center text-slate-400 text-xs">
+                    No lectures scheduled.
+                  </div>
                 ) : (
                   dayClasses.map((item, idx) => (
                     <div
@@ -91,11 +98,15 @@ export default function Timetable() {
                       <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3 text-slate-400" />
-                          <span>{item.slot.startTime} - {item.slot.endTime}</span>
+                          <span>
+                            {item.slot.startTime} - {item.slot.endTime}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-slate-400" />
-                          <span>{item.slot.room || item.course.roomDefault}</span>
+                          <span>
+                            {item.slot.room || item.course.roomDefault}
+                          </span>
                         </div>
                       </div>
                     </div>

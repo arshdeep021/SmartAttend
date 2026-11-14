@@ -1,10 +1,10 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const auditLogSchema = new mongoose.Schema(
   {
     actor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     action: {
@@ -18,7 +18,7 @@ const auditLogSchema = new mongoose.Schema(
     },
     targetId: {
       type: String,
-      default: '',
+      default: "",
     },
     details: {
       type: mongoose.Schema.Types.Mixed,
@@ -26,13 +26,13 @@ const auditLogSchema = new mongoose.Schema(
     },
     ip: {
       type: String,
-      default: '',
+      default: "",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 auditLogSchema.index({ createdAt: -1 });
 auditLogSchema.index({ actor: 1, createdAt: -1 });
 
-export default mongoose.model('AuditLog', auditLogSchema);
+export default mongoose.model("AuditLog", auditLogSchema);

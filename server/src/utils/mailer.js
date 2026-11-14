@@ -1,16 +1,16 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
-const emailAlertsEnabled = process.env.EMAIL_ALERTS_ENABLED === 'true';
+const emailAlertsEnabled = process.env.EMAIL_ALERTS_ENABLED === "true";
 
 let transporter = null;
 
 if (emailAlertsEnabled) {
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+    host: process.env.SMTP_HOST || "smtp.ethereal.email",
     port: Number(process.env.SMTP_PORT) || 587,
     auth: {
-      user: process.env.SMTP_USER || '',
-      pass: process.env.SMTP_PASS || '',
+      user: process.env.SMTP_USER || "",
+      pass: process.env.SMTP_PASS || "",
     },
   });
 }
@@ -18,7 +18,13 @@ if (emailAlertsEnabled) {
 /**
  * Send low-attendance alert email if enabled, otherwise log to console in dev mode
  */
-export async function sendLowAttendanceAlertEmail({ studentEmail, studentName, courseName, percentage, classesNeeded }) {
+export async function sendLowAttendanceAlertEmail({
+  studentEmail,
+  studentName,
+  courseName,
+  percentage,
+  classesNeeded,
+}) {
   const subject = `[URGENT] Low Attendance Warning for ${courseName} - SmartAttend`;
   const text = `Dear ${studentName},\n\nYour attendance in ${courseName} has fallen to ${percentage}%, which is below the mandatory 75% threshold.\n\nYou must attend the next ${classesNeeded} consecutive class(es) to recover your attendance to 75%.\n\nPlease speak with your course instructor immediately.\n\nSmartAttend System`;
 
@@ -32,13 +38,20 @@ export async function sendLowAttendanceAlertEmail({ studentEmail, studentName, c
       });
       console.log(`[Email] Alert email successfully sent to ${studentEmail}`);
     } catch (err) {
-      console.error(`[Email] Failed to send email to ${studentEmail}:`, err.message);
+      console.error(
+        `[Email] Failed to send email to ${studentEmail}:`,
+        err.message,
+      );
     }
   } else {
-    console.log(`[Dev Notification Dispatch] Email simulation for ${studentEmail}:`);
+    console.log(
+      `[Dev Notification Dispatch] Email simulation for ${studentEmail}:`,
+    );
     console.log(`  To: ${studentEmail}`);
     console.log(`  Subject: ${subject}`);
-    console.log(`  Percentage: ${percentage}% | Needed classes: ${classesNeeded}`);
+    console.log(
+      `  Percentage: ${percentage}% | Needed classes: ${classesNeeded}`,
+    );
   }
 }
 

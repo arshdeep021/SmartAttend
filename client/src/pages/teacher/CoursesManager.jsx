@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   BookOpen,
   Users,
@@ -12,13 +12,13 @@ import {
   RefreshCw,
   Search,
   Download,
-} from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function CoursesManager() {
   const [searchParams] = useSearchParams();
-  const initialCourseId = searchParams.get('courseId') || '';
+  const initialCourseId = searchParams.get("courseId") || "";
 
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -32,39 +32,41 @@ export default function CoursesManager() {
   const [showBulkEnrollModal, setShowBulkEnrollModal] = useState(false);
 
   // Create course form state
-  const [newCode, setNewCode] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newDept, setNewDept] = useState('Computer Science');
-  const [newSection, setNewSection] = useState('A');
-  const [newRoom, setNewRoom] = useState('LH-101');
-  const [newTotalPlanned, setNewTotalPlanned] = useState('40');
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newDept, setNewDept] = useState("Computer Science");
+  const [newSection, setNewSection] = useState("A");
+  const [newRoom, setNewRoom] = useState("LH-101");
+  const [newTotalPlanned, setNewTotalPlanned] = useState("40");
   const [creatingCourse, setCreatingCourse] = useState(false);
 
   // Single enroll form state
-  const [studentIdentifier, setStudentIdentifier] = useState('');
+  const [studentIdentifier, setStudentIdentifier] = useState("");
   const [enrollingSingle, setEnrollingSingle] = useState(false);
 
   // Bulk enroll form state
-  const [bulkCsvText, setBulkCsvText] = useState('');
+  const [bulkCsvText, setBulkCsvText] = useState("");
   const [enrollingBulk, setEnrollingBulk] = useState(false);
 
   // Search in roster
-  const [rosterSearch, setRosterSearch] = useState('');
+  const [rosterSearch, setRosterSearch] = useState("");
 
   const fetchCourses = async () => {
     try {
-      const res = await api.get('/courses');
+      const res = await api.get("/courses");
       const list = res.courses || [];
       setCourses(list);
 
       if (list.length > 0) {
-        const found = initialCourseId ? list.find((c) => c._id === initialCourseId) : list[0];
+        const found = initialCourseId
+          ? list.find((c) => c._id === initialCourseId)
+          : list[0];
         const toSelect = found || list[0];
         setSelectedCourse(toSelect);
         fetchRoster(toSelect._id);
       }
     } catch (err) {
-      toast.error('Failed to load courses.');
+      toast.error("Failed to load courses.");
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ export default function CoursesManager() {
       const res = await api.get(`/courses/${courseId}/roster`);
       setRoster(res.roster || []);
     } catch (err) {
-      toast.error('Failed to load roster.');
+      toast.error("Failed to load roster.");
     } finally {
       setLoadingRoster(false);
     }
@@ -95,7 +97,7 @@ export default function CoursesManager() {
     e.preventDefault();
     setCreatingCourse(true);
     try {
-      const res = await api.post('/courses', {
+      const res = await api.post("/courses", {
         code: newCode.toUpperCase().trim(),
         name: newName.trim(),
         department: newDept,
@@ -104,13 +106,13 @@ export default function CoursesManager() {
         totalPlannedClasses: Number(newTotalPlanned),
       });
 
-      toast.success('Course created successfully!');
+      toast.success("Course created successfully!");
       setShowCreateCourseModal(false);
-      setNewCode('');
-      setNewName('');
+      setNewCode("");
+      setNewName("");
       fetchCourses();
     } catch (err) {
-      toast.error(err.message || 'Failed to create course.');
+      toast.error(err.message || "Failed to create course.");
     } finally {
       setCreatingCourse(false);
     }
@@ -127,10 +129,10 @@ export default function CoursesManager() {
       });
       toast.success(res.message);
       setShowSingleEnrollModal(false);
-      setStudentIdentifier('');
+      setStudentIdentifier("");
       fetchRoster(selectedCourse._id);
     } catch (err) {
-      toast.error(err.message || 'Failed to enroll student.');
+      toast.error(err.message || "Failed to enroll student.");
     } finally {
       setEnrollingSingle(false);
     }
@@ -145,7 +147,7 @@ export default function CoursesManager() {
       .filter(Boolean);
 
     if (identifiers.length === 0) {
-      toast.error('Please enter at least one roll number or email.');
+      toast.error("Please enter at least one roll number or email.");
       return;
     }
 
@@ -156,52 +158,58 @@ export default function CoursesManager() {
       });
       toast.success(res.message);
       setShowBulkEnrollModal(false);
-      setBulkCsvText('');
+      setBulkCsvText("");
       fetchRoster(selectedCourse._id);
     } catch (err) {
-      toast.error(err.message || 'Failed to bulk enroll.');
+      toast.error(err.message || "Failed to bulk enroll.");
     } finally {
       setEnrollingBulk(false);
     }
   };
 
   const handleRemoveStudent = async (studentId, studentName) => {
-    if (!window.confirm(`Are you sure you want to remove ${studentName} from this course?`)) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to remove ${studentName} from this course?`,
+      )
+    )
+      return;
 
     try {
       await api.delete(`/courses/${selectedCourse._id}/enroll/${studentId}`);
       toast.success(`${studentName} removed from course.`);
       fetchRoster(selectedCourse._id);
     } catch (err) {
-      toast.error(err.message || 'Failed to remove student.');
+      toast.error(err.message || "Failed to remove student.");
     }
   };
 
   const handleExportRosterCSV = () => {
     if (roster.length === 0) return;
-    let csv = 'Roll No,Student Name,Email,Department,Section,Attended,Total Sessions,Percentage,Status\n';
+    let csv =
+      "Roll No,Student Name,Email,Department,Section,Attended,Total Sessions,Percentage,Status\n";
     roster.forEach((r) => {
-      const roll = r.student?.rollNo || '';
-      const name = `"${r.student?.name || ''}"`;
-      const email = r.student?.email || '';
-      const dept = r.student?.department || '';
-      const sec = r.student?.section || '';
+      const roll = r.student?.rollNo || "";
+      const name = `"${r.student?.name || ""}"`;
+      const email = r.student?.email || "";
+      const dept = r.student?.department || "";
+      const sec = r.student?.section || "";
       const att = r.attendance?.attended || 0;
       const total = r.attendance?.totalConducted || 0;
       const pct = r.attendance?.percentage || 0;
-      const status = r.attendance?.isAtRisk ? 'BELOW 75%' : 'ELIGIBLE';
+      const status = r.attendance?.isAtRisk ? "BELOW 75%" : "ELIGIBLE";
       csv += `${roll},${name},${email},${dept},${sec},${att},${total},${pct}%,${status}\n`;
     });
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${selectedCourse?.code}_roster_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast.success('Roster CSV downloaded!');
+    toast.success("Roster CSV downloaded!");
   };
 
   if (loading) {
@@ -232,7 +240,8 @@ export default function CoursesManager() {
             Courses & Roster Management
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Create courses, enroll students individually or via CSV import, and inspect rosters
+            Create courses, enroll students individually or via CSV import, and
+            inspect rosters
           </p>
         </div>
 
@@ -253,8 +262,8 @@ export default function CoursesManager() {
             onClick={() => handleSelectCourse(c)}
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 border ${
               selectedCourse?._id === c._id
-                ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/20'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                ? "bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/20"
+                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50"
             }`}
           >
             <span>{c.code}</span>
@@ -278,7 +287,9 @@ export default function CoursesManager() {
                 </h2>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Department: {selectedCourse.department} &bull; Section: {selectedCourse.section || 'A'} &bull; Default Room: {selectedCourse.roomDefault}
+                Department: {selectedCourse.department} &bull; Section:{" "}
+                {selectedCourse.section || "A"} &bull; Default Room:{" "}
+                {selectedCourse.roomDefault}
               </p>
             </div>
 
@@ -329,10 +340,13 @@ export default function CoursesManager() {
 
           {/* Roster Table */}
           {loadingRoster ? (
-            <div className="py-12 text-center text-slate-400 text-xs">Loading course roster...</div>
+            <div className="py-12 text-center text-slate-400 text-xs">
+              Loading course roster...
+            </div>
           ) : filteredRoster.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
-              No students enrolled in this course yet. Use Add Student or Bulk CSV Import.
+              No students enrolled in this course yet. Use Add Student or Bulk
+              CSV Import.
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -353,25 +367,31 @@ export default function CoursesManager() {
                     const isApproaching = r.attendance?.isApproachingRisk;
 
                     return (
-                      <tr key={r.student?._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <tr
+                        key={r.student?._id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                      >
                         <td className="px-5 py-3.5 font-mono font-bold text-brand-600 dark:text-brand-400">
-                          {r.student?.rollNo || '---'}
+                          {r.student?.rollNo || "---"}
                         </td>
                         <td className="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
                           {r.student?.name}
-                          <p className="text-[11px] font-normal text-slate-400">{r.student?.email}</p>
+                          <p className="text-[11px] font-normal text-slate-400">
+                            {r.student?.email}
+                          </p>
                         </td>
                         <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300">
-                          {r.attendance?.attended || 0} / {r.attendance?.totalConducted || 0} classes
+                          {r.attendance?.attended || 0} /{" "}
+                          {r.attendance?.totalConducted || 0} classes
                         </td>
                         <td className="px-5 py-3.5">
                           <span
                             className={`font-black text-xs px-2 py-0.5 rounded-md ${
                               isAtRisk
-                                ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+                                ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
                                 : isApproaching
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                             }`}
                           >
                             {r.attendance?.percentage || 0}%
@@ -381,7 +401,8 @@ export default function CoursesManager() {
                           {isAtRisk ? (
                             <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">
                               <AlertTriangle className="w-3.5 h-3.5" />
-                              Below 75% (+{r.attendance?.classesToRecover} classes)
+                              Below 75% (+{r.attendance?.classesToRecover}{" "}
+                              classes)
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -392,7 +413,12 @@ export default function CoursesManager() {
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <button
-                            onClick={() => handleRemoveStudent(r.student?._id, r.student?.name)}
+                            onClick={() =>
+                              handleRemoveStudent(
+                                r.student?._id,
+                                r.student?.name,
+                              )
+                            }
                             className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40"
                             title="Remove student from roster"
                           >
@@ -417,7 +443,8 @@ export default function CoursesManager() {
               Add Student to Course
             </h3>
             <p className="text-xs text-slate-400 mb-4">
-              Enter the student's roll number or email to enroll them into {selectedCourse?.code}
+              Enter the student's roll number or email to enroll them into{" "}
+              {selectedCourse?.code}
             </p>
 
             <form onSubmit={handleSingleEnroll} className="space-y-4">
@@ -448,7 +475,7 @@ export default function CoursesManager() {
                   disabled={enrollingSingle}
                   className="flex-1 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-md"
                 >
-                  {enrollingSingle ? 'Enrolling...' : 'Enroll Student'}
+                  {enrollingSingle ? "Enrolling..." : "Enroll Student"}
                 </button>
               </div>
             </form>
@@ -464,7 +491,8 @@ export default function CoursesManager() {
               Bulk Student Enrollment (CSV)
             </h3>
             <p className="text-xs text-slate-400 mb-4">
-              Paste roll numbers or emails (one per line or comma-separated) to enroll multiple students at once:
+              Paste roll numbers or emails (one per line or comma-separated) to
+              enroll multiple students at once:
             </p>
 
             <form onSubmit={handleBulkEnroll} className="space-y-4">
@@ -474,7 +502,9 @@ export default function CoursesManager() {
                   required
                   value={bulkCsvText}
                   onChange={(e) => setBulkCsvText(e.target.value)}
-                  placeholder={"CS001\nCS002\nCS003\nriya.sharma@smartattend.edu"}
+                  placeholder={
+                    "CS001\nCS002\nCS003\nriya.sharma@smartattend.edu"
+                  }
                   className="w-full p-3 font-mono text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
                 />
               </div>
@@ -492,7 +522,7 @@ export default function CoursesManager() {
                   disabled={enrollingBulk}
                   className="flex-1 py-2 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-md"
                 >
-                  {enrollingBulk ? 'Importing...' : 'Enroll Students'}
+                  {enrollingBulk ? "Importing..." : "Enroll Students"}
                 </button>
               </div>
             </form>
@@ -595,7 +625,7 @@ export default function CoursesManager() {
                   disabled={creatingCourse}
                   className="flex-1 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-md"
                 >
-                  {creatingCourse ? 'Creating...' : 'Create Course'}
+                  {creatingCourse ? "Creating..." : "Create Course"}
                 </button>
               </div>
             </form>

@@ -9,7 +9,11 @@
  * @param {number} [threshold=75] - Required threshold percentage (default 75)
  * @returns {object} Attendance metrics
  */
-export function calculateAttendanceMetrics(attended, totalConducted, threshold = 75) {
+export function calculateAttendanceMetrics(
+  attended,
+  totalConducted,
+  threshold = 75,
+) {
   const att = Math.max(0, Number(attended) || 0);
   const total = Math.max(0, Number(totalConducted) || 0);
   const targetFraction = threshold / 100;
@@ -24,8 +28,8 @@ export function calculateAttendanceMetrics(attended, totalConducted, threshold =
       isSafe: true,
       classesToRecover: 0,
       classesCanMiss: 0,
-      statusLabel: 'No sessions held yet',
-      colorStatus: 'green', // 'green' | 'amber' | 'red'
+      statusLabel: "No sessions held yet",
+      colorStatus: "green", // 'green' | 'amber' | 'red'
     };
   }
 
@@ -49,11 +53,11 @@ export function calculateAttendanceMetrics(attended, totalConducted, threshold =
     classesCanMiss = Math.max(0, Math.floor(canMiss));
   }
 
-  let colorStatus = 'green';
+  let colorStatus = "green";
   if (isAtRisk) {
-    colorStatus = 'red';
+    colorStatus = "red";
   } else if (isApproachingRisk) {
-    colorStatus = 'amber';
+    colorStatus = "amber";
   }
 
   return {
@@ -83,7 +87,11 @@ export function calculateOverallAttendance(courseStats, threshold = 75) {
   const approachingCourses = [];
 
   for (const cs of courseStats) {
-    const metrics = calculateAttendanceMetrics(cs.attended, cs.totalConducted, threshold);
+    const metrics = calculateAttendanceMetrics(
+      cs.attended,
+      cs.totalConducted,
+      threshold,
+    );
     const summary = {
       course: cs.course,
       ...metrics,
@@ -100,7 +108,11 @@ export function calculateOverallAttendance(courseStats, threshold = 75) {
     totalConducted += cs.totalConducted;
   }
 
-  const overallMetrics = calculateAttendanceMetrics(totalAttended, totalConducted, threshold);
+  const overallMetrics = calculateAttendanceMetrics(
+    totalAttended,
+    totalConducted,
+    threshold,
+  );
 
   return {
     overall: overallMetrics,
@@ -108,6 +120,7 @@ export function calculateOverallAttendance(courseStats, threshold = 75) {
     atRiskCourses,
     approachingCourses,
     hasLowAttendanceAlert: atRiskCourses.length > 0 || overallMetrics.isAtRisk,
-    hasApproachingWarning: approachingCourses.length > 0 || overallMetrics.isApproachingRisk,
+    hasApproachingWarning:
+      approachingCourses.length > 0 || overallMetrics.isApproachingRisk,
   };
 }

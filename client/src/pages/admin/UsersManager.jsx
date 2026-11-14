@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Users,
   Search,
@@ -17,16 +17,16 @@ import {
   Mail,
   User,
   GraduationCap,
-} from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function UsersManager() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState("");
   const [notEnrolledFilter, setNotEnrolledFilter] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -37,22 +37,22 @@ export default function UsersManager() {
   // Create / Edit modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [modalRole, setModalRole] = useState('student');
+  const [modalRole, setModalRole] = useState("student");
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    department: 'Computer Science',
-    rollNo: '',
-    section: 'A',
+    name: "",
+    email: "",
+    password: "",
+    department: "Computer Science",
+    rollNo: "",
+    section: "A",
     courseIds: [],
   });
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState("");
 
   // Delete confirmation modal state
   const [deleteCandidate, setDeleteCandidate] = useState(null);
-  const [deleteWarning, setDeleteWarning] = useState('');
+  const [deleteWarning, setDeleteWarning] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   // Fetch users from server (Never relies on stale optimistic state)
@@ -61,9 +61,9 @@ export default function UsersManager() {
     try {
       const queryParams = new URLSearchParams({
         page: String(page),
-        limit: '20',
+        limit: "20",
         ...(roleFilter ? { role: roleFilter } : {}),
-        ...(notEnrolledFilter ? { notEnrolledOnly: 'true' } : {}),
+        ...(notEnrolledFilter ? { notEnrolledOnly: "true" } : {}),
         ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
       });
 
@@ -72,7 +72,7 @@ export default function UsersManager() {
       setTotalPages(res.pagination?.totalPages || 1);
       setTotalCount(res.pagination?.total || 0);
     } catch (err) {
-      toast.error('Failed to load user directory.');
+      toast.error("Failed to load user directory.");
     } finally {
       setLoading(false);
     }
@@ -81,10 +81,10 @@ export default function UsersManager() {
   // Fetch courses for enrollment checklist
   const fetchCourses = async () => {
     try {
-      const res = await api.get('/courses');
+      const res = await api.get("/courses");
       setAvailableCourses(res.courses || []);
     } catch (e) {
-      console.error('Failed to load courses for user creator:', e);
+      console.error("Failed to load courses for user creator:", e);
     }
   };
 
@@ -102,17 +102,17 @@ export default function UsersManager() {
     fetchUsers();
   };
 
-  const openAddModal = (initialRole = 'student') => {
+  const openAddModal = (initialRole = "student") => {
     setEditingUser(null);
     setModalRole(initialRole);
-    setFormError('');
+    setFormError("");
     setFormData({
-      name: '',
-      email: '',
-      password: '',
-      department: 'Computer Science',
-      rollNo: '',
-      section: 'A',
+      name: "",
+      email: "",
+      password: "",
+      department: "Computer Science",
+      rollNo: "",
+      section: "A",
       courseIds: [],
     });
     setShowAddModal(true);
@@ -121,14 +121,14 @@ export default function UsersManager() {
   const openEditModal = (user) => {
     setEditingUser(user);
     setModalRole(user.role);
-    setFormError('');
+    setFormError("");
     setFormData({
-      name: user.name || '',
-      email: user.email || '',
-      password: '',
-      department: user.department || 'Computer Science',
-      rollNo: user.rollNo || '',
-      section: user.section || 'A',
+      name: user.name || "",
+      email: user.email || "",
+      password: "",
+      department: user.department || "Computer Science",
+      rollNo: user.rollNo || "",
+      section: user.section || "A",
       courseIds: (user.enrolledCourses || []).map((c) => c._id || c),
     });
     setShowAddModal(true);
@@ -136,7 +136,7 @@ export default function UsersManager() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    setFormError('');
+    setFormError("");
     setSubmitting(true);
 
     try {
@@ -152,7 +152,7 @@ export default function UsersManager() {
         payload.password = formData.password.trim();
       }
 
-      if (modalRole === 'student') {
+      if (modalRole === "student") {
         payload.rollNo = formData.rollNo.trim();
         payload.section = formData.section.trim();
       }
@@ -161,15 +161,19 @@ export default function UsersManager() {
         await api.put(`/admin/users/${editingUser._id}`, payload);
         toast.success(`User ${payload.name} updated successfully.`);
       } else {
-        await api.post('/admin/users', payload);
-        toast.success(`${modalRole === 'student' ? 'Student' : 'Teacher'} created and approved successfully!`);
+        await api.post("/admin/users", payload);
+        toast.success(
+          `${modalRole === "student" ? "Student" : "Teacher"} created and approved successfully!`,
+        );
       }
 
       setShowAddModal(false);
       // Refresh strictly from the server to guarantee consistency
       await fetchUsers();
     } catch (err) {
-      setFormError(err.message || 'Operation failed. Please verify input fields.');
+      setFormError(
+        err.message || "Operation failed. Please verify input fields.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -181,7 +185,7 @@ export default function UsersManager() {
       toast.success(res.message);
       await fetchUsers();
     } catch (err) {
-      toast.error(err.message || 'Failed to toggle status.');
+      toast.error(err.message || "Failed to toggle status.");
     }
   };
 
@@ -191,28 +195,30 @@ export default function UsersManager() {
       toast.success(res.message || `Approved ${teacher.name}`);
       await fetchUsers();
     } catch (err) {
-      toast.error(err.message || 'Failed to approve teacher.');
+      toast.error(err.message || "Failed to approve teacher.");
     }
   };
 
   const initiateDelete = (user) => {
     setDeleteCandidate(user);
-    setDeleteWarning('');
+    setDeleteWarning("");
   };
 
   const confirmDelete = async (force = false) => {
     if (!deleteCandidate) return;
     setDeleting(true);
     try {
-      await api.delete(`/admin/users/${deleteCandidate._id}${force ? '?force=true' : ''}`);
+      await api.delete(
+        `/admin/users/${deleteCandidate._id}${force ? "?force=true" : ""}`,
+      );
       toast.success(`User ${deleteCandidate.name} removed successfully.`);
       setDeleteCandidate(null);
       await fetchUsers();
     } catch (err) {
-      if (err.code === 'HAS_ATTENDANCE_RECORDS') {
+      if (err.code === "HAS_ATTENDANCE_RECORDS") {
         setDeleteWarning(err.message);
       } else {
-        toast.error(err.message || 'Failed to delete user.');
+        toast.error(err.message || "Failed to delete user.");
         setDeleteCandidate(null);
       }
     } finally {
@@ -229,21 +235,22 @@ export default function UsersManager() {
             User Directory & Accounts
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Create, manage, and enroll student, teacher, and administrator accounts ({totalCount} total)
+            Create, manage, and enroll student, teacher, and administrator
+            accounts ({totalCount} total)
           </p>
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => openAddModal('student')}
+            onClick={() => openAddModal("student")}
             className="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Add Student</span>
           </button>
           <button
-            onClick={() => openAddModal('teacher')}
+            onClick={() => openAddModal("teacher")}
             className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-md shadow-teal-600/20 flex items-center gap-1.5 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -295,11 +302,13 @@ export default function UsersManager() {
             }}
             className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
               notEnrolledFilter
-                ? 'bg-amber-500 text-white border-amber-500'
-                : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
             }`}
           >
-            {notEnrolledFilter ? 'Showing: Not Enrolled Only' : 'Filter: Unenrolled Students'}
+            {notEnrolledFilter
+              ? "Showing: Not Enrolled Only"
+              : "Filter: Unenrolled Students"}
           </button>
         </div>
       </div>
@@ -331,7 +340,10 @@ export default function UsersManager() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {users.map((u) => (
-                  <tr key={u._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                  <tr
+                    key={u._id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/30"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 font-bold flex items-center justify-center text-xs shrink-0">
@@ -339,14 +351,18 @@ export default function UsersManager() {
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <p className="font-bold text-slate-900 dark:text-white">{u.name}</p>
-                            {u.role === 'teacher' && !u.approved && (
+                            <p className="font-bold text-slate-900 dark:text-white">
+                              {u.name}
+                            </p>
+                            {u.role === "teacher" && !u.approved && (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                                 Pending Approval
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-400">{u.email}</p>
+                          <p className="text-[11px] text-slate-400">
+                            {u.email}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -354,11 +370,11 @@ export default function UsersManager() {
                     <td className="px-6 py-4">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          u.role === 'admin'
-                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
-                            : u.role === 'teacher'
-                            ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                          u.role === "admin"
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
+                            : u.role === "teacher"
+                              ? "bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
                         }`}
                       >
                         {u.role}
@@ -370,15 +386,16 @@ export default function UsersManager() {
                     </td>
 
                     <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-300">
-                      {u.rollNo ? `${u.rollNo} (${u.section || 'A'})` : 'N/A'}
+                      {u.rollNo ? `${u.rollNo} (${u.section || "A"})` : "N/A"}
                     </td>
 
                     <td className="px-6 py-4">
-                      {u.role === 'student' ? (
+                      {u.role === "student" ? (
                         u.enrolledCoursesCount > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                             <BookOpen className="w-3 h-3 text-brand-500" />
-                            {u.enrolledCoursesCount} course{u.enrolledCoursesCount > 1 ? 's' : ''}
+                            {u.enrolledCoursesCount} course
+                            {u.enrolledCoursesCount > 1 ? "s" : ""}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
@@ -395,17 +412,17 @@ export default function UsersManager() {
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           u.isActive
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                            : 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            : "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300"
                         }`}
                       >
-                        {u.isActive ? 'Active' : 'Deactivated'}
+                        {u.isActive ? "Active" : "Deactivated"}
                       </span>
                     </td>
 
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {u.role === 'teacher' && !u.approved && (
+                        {u.role === "teacher" && !u.approved && (
                           <button
                             onClick={() => handleApproveTeacherDirect(u)}
                             className="p-1 rounded text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
@@ -423,16 +440,20 @@ export default function UsersManager() {
                           <Edit2 className="w-4 h-4" />
                         </button>
 
-                        {u.role !== 'admin' && (
+                        {u.role !== "admin" && (
                           <>
                             <button
                               onClick={() => handleToggleStatus(u)}
                               className={`p-1.5 rounded-lg text-xs font-semibold ${
                                 u.isActive
-                                  ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/40'
-                                  : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                                  ? "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                  : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                               }`}
-                              title={u.isActive ? 'Deactivate user' : 'Reactivate user'}
+                              title={
+                                u.isActive
+                                  ? "Deactivate user"
+                                  : "Reactivate user"
+                              }
                             >
                               <Power className="w-4 h-4" />
                             </button>
@@ -458,7 +479,9 @@ export default function UsersManager() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Page {page} of {totalPages}</span>
+            <span className="text-slate-500">
+              Page {page} of {totalPages}
+            </span>
             <div className="flex gap-2">
               <button
                 disabled={page <= 1}
@@ -486,7 +509,9 @@ export default function UsersManager() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-brand-600" />
-                {editingUser ? `Edit Account: ${editingUser.name}` : `Create New ${modalRole === 'student' ? 'Student' : 'Teacher'}`}
+                {editingUser
+                  ? `Edit Account: ${editingUser.name}`
+                  : `Create New ${modalRole === "student" ? "Student" : "Teacher"}`}
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -512,22 +537,22 @@ export default function UsersManager() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => setModalRole('student')}
+                      onClick={() => setModalRole("student")}
                       className={`flex-1 py-2 font-bold rounded-xl border ${
-                        modalRole === 'student'
-                          ? 'bg-brand-600 text-white border-brand-600'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        modalRole === "student"
+                          ? "bg-brand-600 text-white border-brand-600"
+                          : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
                       }`}
                     >
                       Student
                     </button>
                     <button
                       type="button"
-                      onClick={() => setModalRole('teacher')}
+                      onClick={() => setModalRole("teacher")}
                       className={`flex-1 py-2 font-bold rounded-xl border ${
-                        modalRole === 'teacher'
-                          ? 'bg-teal-600 text-white border-teal-600'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        modalRole === "teacher"
+                          ? "bg-teal-600 text-white border-teal-600"
+                          : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
                       }`}
                     >
                       Teacher
@@ -544,7 +569,9 @@ export default function UsersManager() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="e.g. John Doe"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
                 />
@@ -558,13 +585,15 @@ export default function UsersManager() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   placeholder="name@smartattend.edu"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
                 />
               </div>
 
-              {modalRole === 'student' && (
+              {modalRole === "student" && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
@@ -574,7 +603,12 @@ export default function UsersManager() {
                       type="text"
                       required
                       value={formData.rollNo}
-                      onChange={(e) => setFormData({ ...formData, rollNo: e.target.value.toUpperCase() })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          rollNo: e.target.value.toUpperCase(),
+                        })
+                      }
                       placeholder="e.g. CS042"
                       className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono uppercase"
                     />
@@ -586,7 +620,9 @@ export default function UsersManager() {
                     <input
                       type="text"
                       value={formData.section}
-                      onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, section: e.target.value })
+                      }
                       placeholder="A"
                       className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
                     />
@@ -602,7 +638,9 @@ export default function UsersManager() {
                   type="text"
                   required
                   value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, department: e.target.value })
+                  }
                   placeholder="Computer Science"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
                 />
@@ -610,25 +648,32 @@ export default function UsersManager() {
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                  Password {editingUser && '(Leave blank to keep unchanged)'}
+                  Password {editingUser && "(Leave blank to keep unchanged)"}
                 </label>
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder={editingUser ? '••••••••' : `Default: ${modalRole === 'student' ? 'Student@123' : 'Teacher@123'}`}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  placeholder={
+                    editingUser
+                      ? "••••••••"
+                      : `Default: ${modalRole === "student" ? "Student@123" : "Teacher@123"}`
+                  }
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
                 />
               </div>
 
               {/* Course Enrollment Selection for Students */}
-              {modalRole === 'student' && (
+              {modalRole === "student" && (
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                     Assign / Enroll in Courses
                   </label>
                   <p className="text-[11px] text-slate-400 mb-2">
-                    Select courses to enroll this student into so they immediately appear in rosters and sessions
+                    Select courses to enroll this student into so they
+                    immediately appear in rosters and sessions
                   </p>
                   <div className="max-h-40 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
                     {availableCourses.map((c) => {
@@ -643,15 +688,27 @@ export default function UsersManager() {
                             checked={isChecked}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setFormData({ ...formData, courseIds: [...formData.courseIds, c._id] });
+                                setFormData({
+                                  ...formData,
+                                  courseIds: [...formData.courseIds, c._id],
+                                });
                               } else {
-                                setFormData({ ...formData, courseIds: formData.courseIds.filter((id) => id !== c._id) });
+                                setFormData({
+                                  ...formData,
+                                  courseIds: formData.courseIds.filter(
+                                    (id) => id !== c._id,
+                                  ),
+                                });
                               }
                             }}
                             className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                           />
-                          <span className="font-bold text-slate-800 dark:text-slate-200">{c.code}</span>
-                          <span className="text-slate-500 dark:text-slate-400">&bull; {c.name}</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {c.code}
+                          </span>
+                          <span className="text-slate-500 dark:text-slate-400">
+                            &bull; {c.name}
+                          </span>
                         </label>
                       );
                     })}
@@ -673,7 +730,7 @@ export default function UsersManager() {
                   className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold flex items-center gap-2"
                 >
                   {submitting && <RefreshCw className="w-4 h-4 animate-spin" />}
-                  <span>{editingUser ? 'Save Changes' : 'Create User'}</span>
+                  <span>{editingUser ? "Save Changes" : "Create User"}</span>
                 </button>
               </div>
             </form>
@@ -699,7 +756,8 @@ export default function UsersManager() {
               </div>
             ) : (
               <p className="text-xs text-slate-600 dark:text-slate-300 mb-4">
-                Are you sure you want to permanently delete {deleteCandidate.name} ({deleteCandidate.email})?
+                Are you sure you want to permanently delete{" "}
+                {deleteCandidate.name} ({deleteCandidate.email})?
               </p>
             )}
 

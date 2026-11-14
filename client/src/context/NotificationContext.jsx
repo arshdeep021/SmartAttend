@@ -1,6 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api } from '../api/client.js';
-import { useAuth } from './AuthContext.jsx';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { api } from "../api/client.js";
+import { useAuth } from "./AuthContext.jsx";
 
 const NotificationContext = createContext();
 
@@ -14,7 +20,7 @@ export function NotificationProvider({ children }) {
   const fetchUnreadCount = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      const res = await api.get('/notifications/unread-count');
+      const res = await api.get("/notifications/unread-count");
       setUnreadCount(res.unreadCount || 0);
       setHasLowAttendanceWarning(Boolean(res.hasLowAttendanceWarning));
     } catch {
@@ -26,12 +32,12 @@ export function NotificationProvider({ children }) {
     if (!isAuthenticated) return;
     setLoading(true);
     try {
-      const res = await api.get('/notifications');
+      const res = await api.get("/notifications");
       setNotifications(res.notifications || []);
       // Also update counts
       fetchUnreadCount();
     } catch (err) {
-      console.error('Failed to load notifications:', err);
+      console.error("Failed to load notifications:", err);
     } finally {
       setLoading(false);
     }
@@ -52,10 +58,10 @@ export function NotificationProvider({ children }) {
   const markAsRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
-      setNotifications(prev =>
-        prev.map(n => (n._id === id ? { ...n, read: true } : n))
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n)),
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       console.error(err);
     }
@@ -63,8 +69,8 @@ export function NotificationProvider({ children }) {
 
   const markAllAsRead = async () => {
     try {
-      await api.put('/notifications/mark-all-read');
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await api.put("/notifications/mark-all-read");
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
       setHasLowAttendanceWarning(false);
     } catch (err) {

@@ -1,7 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, Save, ShieldCheck, Bell, Clock, RefreshCw, UserCheck, BookOpen } from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import {
+  Settings,
+  Save,
+  ShieldCheck,
+  Bell,
+  Clock,
+  RefreshCw,
+  UserCheck,
+  BookOpen,
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function SystemSettings() {
   const [threshold, setThreshold] = useState(75);
@@ -10,14 +19,17 @@ export default function SystemSettings() {
   const [lateGrace, setLateGrace] = useState(10);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [autoApproveTeachers, setAutoApproveTeachers] = useState(false);
-  const [allowStudentSelfEnrollment, setAllowStudentSelfEnrollment] = useState(true);
-  const [institutionName, setInstitutionName] = useState('Apex Institute of Technology');
+  const [allowStudentSelfEnrollment, setAllowStudentSelfEnrollment] =
+    useState(true);
+  const [institutionName, setInstitutionName] = useState(
+    "Apex Institute of Technology",
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const fetchSettings = async () => {
     try {
-      const res = await api.get('/admin/settings');
+      const res = await api.get("/admin/settings");
       if (res.settings) {
         setThreshold(res.settings.attendanceThreshold || 75);
         setQrRefresh(res.settings.qrRefreshInterval || 30);
@@ -25,11 +37,15 @@ export default function SystemSettings() {
         setLateGrace(res.settings.lateGraceMinutes || 10);
         setEmailEnabled(Boolean(res.settings.emailAlertsEnabled));
         setAutoApproveTeachers(Boolean(res.settings.autoApproveTeachers));
-        setAllowStudentSelfEnrollment(res.settings.allowStudentSelfEnrollment !== false);
-        setInstitutionName(res.settings.institutionName || 'Apex Institute of Technology');
+        setAllowStudentSelfEnrollment(
+          res.settings.allowStudentSelfEnrollment !== false,
+        );
+        setInstitutionName(
+          res.settings.institutionName || "Apex Institute of Technology",
+        );
       }
     } catch (err) {
-      toast.error('Failed to load system settings.');
+      toast.error("Failed to load system settings.");
     } finally {
       setLoading(false);
     }
@@ -43,7 +59,7 @@ export default function SystemSettings() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await api.put('/admin/settings', {
+      const res = await api.put("/admin/settings", {
         attendanceThreshold: Number(threshold),
         qrRefreshInterval: Number(qrRefresh),
         qrTokenExpiry: Number(qrExpiry),
@@ -53,9 +69,9 @@ export default function SystemSettings() {
         allowStudentSelfEnrollment: Boolean(allowStudentSelfEnrollment),
         institutionName,
       });
-      toast.success(res.message || 'System settings saved successfully!');
+      toast.success(res.message || "System settings saved successfully!");
     } catch (err) {
-      toast.error(err.message || 'Failed to update settings.');
+      toast.error(err.message || "Failed to update settings.");
     } finally {
       setSaving(false);
     }
@@ -77,11 +93,15 @@ export default function SystemSettings() {
           Global System Configurations
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Adjust compliance thresholds, anti-proxy rotation intervals, and approval policies
+          Adjust compliance thresholds, anti-proxy rotation intervals, and
+          approval policies
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6">
+      <form
+        onSubmit={handleSave}
+        className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6"
+      >
         {/* Institutional Settings */}
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
@@ -122,7 +142,8 @@ export default function SystemSettings() {
                 className="w-full accent-brand-600 cursor-pointer"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                Students dropping below this percentage will immediately trigger alerts, warning banners, and login popups.
+                Students dropping below this percentage will immediately trigger
+                alerts, warning banners, and login popups.
               </p>
             </div>
           </div>
@@ -141,7 +162,8 @@ export default function SystemSettings() {
                 Auto-approve Registered Teachers
               </h3>
               <p className="text-[11px] text-slate-400">
-                When enabled, teachers registering via the portal can sign in immediately without manual admin approval (default: off)
+                When enabled, teachers registering via the portal can sign in
+                immediately without manual admin approval (default: off)
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
@@ -161,14 +183,17 @@ export default function SystemSettings() {
                 Student Self-Enrollment by Course Code
               </h3>
               <p className="text-[11px] text-slate-400">
-                Allow students to join courses by entering their subject course code directly from their dashboard
+                Allow students to join courses by entering their subject course
+                code directly from their dashboard
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
               <input
                 type="checkbox"
                 checked={allowStudentSelfEnrollment}
-                onChange={(e) => setAllowStudentSelfEnrollment(e.target.checked)}
+                onChange={(e) =>
+                  setAllowStudentSelfEnrollment(e.target.checked)
+                }
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600" />
@@ -198,7 +223,8 @@ export default function SystemSettings() {
                 className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
               />
               <p className="text-[10px] text-slate-400 mt-1">
-                Single source of truth: drives both the live QR symbol and 6-char PIN window (default: 30s).
+                Single source of truth: drives both the live QR symbol and
+                6-char PIN window (default: 30s).
               </p>
             </div>
 
@@ -216,7 +242,8 @@ export default function SystemSettings() {
                 className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
               />
               <p className="text-[10px] text-slate-400 mt-1">
-                Check-ins recorded after this many minutes from start are classified as 'Late'.
+                Check-ins recorded after this many minutes from start are
+                classified as 'Late'.
               </p>
             </div>
           </div>
@@ -230,7 +257,8 @@ export default function SystemSettings() {
                 Automated SMTP Email Notifications
               </h3>
               <p className="text-[11px] text-slate-400">
-                Dispatch alerts via SMTP when student attendance drops below the compliance threshold
+                Dispatch alerts via SMTP when student attendance drops below the
+                compliance threshold
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
@@ -251,7 +279,9 @@ export default function SystemSettings() {
           className="w-full py-3 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-lg shadow-brand-600/25 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
           <Save className="w-4 h-4" />
-          <span>{saving ? 'Saving Configurations...' : 'Save System Settings'}</span>
+          <span>
+            {saving ? "Saving Configurations..." : "Save System Settings"}
+          </span>
         </button>
       </form>
     </div>

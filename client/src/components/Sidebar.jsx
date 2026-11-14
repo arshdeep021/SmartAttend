@@ -1,6 +1,6 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import React from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 import {
   LayoutDashboard,
   QrCode,
@@ -16,37 +16,56 @@ import {
   ScrollText,
   User,
   Radio,
-} from 'lucide-react';
+} from "lucide-react";
 
 export default function Sidebar() {
   const { isStudent, isTeacher, isAdmin } = useAuth();
   const location = useLocation();
 
   const studentLinks = [
-    { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/student/scan', label: 'Scan Attendance', icon: QrCode, highlight: true },
-    { to: '/student/history', label: 'My Records', icon: History },
-    { to: '/student/timetable', label: 'Timetable', icon: CalendarDays },
-    { to: '/student/notifications', label: 'Alerts', icon: Bell },
-    { to: '/student/profile', label: 'Profile', icon: User },
+    { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    {
+      to: "/student/scan",
+      label: "Scan Attendance",
+      icon: QrCode,
+      highlight: true,
+    },
+    { to: "/student/history", label: "My Records", icon: History },
+    { to: "/student/timetable", label: "Timetable", icon: CalendarDays },
+    { to: "/student/notifications", label: "Alerts", icon: Bell },
+    { to: "/student/profile", label: "Profile", icon: User },
   ];
 
   const teacherLinks = [
-    { to: '/teacher/dashboard', label: 'Overview', icon: LayoutDashboard },
-    { to: '/teacher/live', label: 'Live QR Projector', icon: Radio, highlight: true },
-    { to: '/teacher/courses', label: 'Courses & Roster', icon: BookOpen },
-    { to: '/teacher/reports', label: 'Attendance Reports', icon: FileBarChart },
+    { to: "/teacher/dashboard", label: "Overview", icon: LayoutDashboard },
+    {
+      to: "/teacher/live",
+      label: "Live QR Projector",
+      icon: Radio,
+      highlight: true,
+    },
+    { to: "/teacher/courses", label: "Courses & Roster", icon: BookOpen },
+    { to: "/teacher/reports", label: "Attendance Reports", icon: FileBarChart },
   ];
 
   const adminLinks = [
-    { to: '/admin/dashboard', label: 'Analytics', icon: LayoutDashboard },
-    { to: '/admin/approvals', label: 'Teacher Approvals', icon: UserCheck, highlight: true },
-    { to: '/admin/users', label: 'User Directory', icon: Users },
-    { to: '/admin/settings', label: 'System Settings', icon: Settings },
-    { to: '/admin/audit-logs', label: 'Audit Trail', icon: ScrollText },
+    { to: "/admin/dashboard", label: "Analytics", icon: LayoutDashboard },
+    {
+      to: "/admin/approvals",
+      label: "Teacher Approvals",
+      icon: UserCheck,
+      highlight: true,
+    },
+    { to: "/admin/users", label: "User Directory", icon: Users },
+    { to: "/admin/settings", label: "System Settings", icon: Settings },
+    { to: "/admin/audit-logs", label: "Audit Trail", icon: ScrollText },
   ];
 
-  const links = isStudent ? studentLinks : isTeacher ? teacherLinks : adminLinks;
+  const links = isStudent
+    ? studentLinks
+    : isTeacher
+      ? teacherLinks
+      : adminLinks;
 
   return (
     <>
@@ -68,14 +87,16 @@ export default function Sidebar() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
+                      ? "bg-brand-600 text-white shadow-md shadow-brand-600/20"
                       : link.highlight
-                      ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                        ? "bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
                   }`
                 }
               >
-                <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : ''}`} />
+                <Icon
+                  className={`w-5 h-5 shrink-0 ${isActive ? "text-white" : ""}`}
+                />
                 <span>{link.label}</span>
                 {link.highlight && !isActive && (
                   <span className="ml-auto w-2 h-2 rounded-full bg-brand-500 animate-ping" />
@@ -92,7 +113,8 @@ export default function Sidebar() {
             <span>Anti-Proxy Security</span>
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-            Single-session rotating JWT tokens with unique compound index enforcement.
+            Single-session rotating JWT tokens with unique compound index
+            enforcement.
           </p>
         </div>
       </aside>
@@ -109,17 +131,17 @@ export default function Sidebar() {
               to={link.to}
               className={`flex flex-col items-center justify-center p-2 rounded-xl text-[10px] font-bold transition-all ${
                 isActive
-                  ? 'text-brand-600 dark:text-brand-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
+                  ? "text-brand-600 dark:text-brand-400"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
               <div
                 className={`p-1 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-brand-500/10'
+                    ? "bg-brand-500/10"
                     : link.highlight
-                    ? 'bg-brand-600 text-white p-1.5 -translate-y-2 shadow-lg shadow-brand-600/30'
-                    : ''
+                      ? "bg-brand-600 text-white p-1.5 -translate-y-2 shadow-lg shadow-brand-600/30"
+                      : ""
                 }`}
               >
                 <Icon className="w-5 h-5" />

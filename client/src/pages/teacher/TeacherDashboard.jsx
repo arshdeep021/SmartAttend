@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Users,
   Radio,
@@ -13,19 +13,19 @@ import {
   Clock,
   MapPin,
   CheckCircle2,
-} from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function TeacherDashboard() {
   const [courses, setCourses] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [topic, setTopic] = useState('');
-  const [room, setRoom] = useState('');
-  const [duration, setDuration] = useState('15');
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [topic, setTopic] = useState("");
+  const [room, setRoom] = useState("");
+  const [duration, setDuration] = useState("15");
   const [creatingSession, setCreatingSession] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
 
@@ -34,14 +34,14 @@ export default function TeacherDashboard() {
   const fetchData = async () => {
     try {
       const [coursesRes, sessionsRes] = await Promise.all([
-        api.get('/courses'),
-        api.get('/sessions'),
+        api.get("/courses"),
+        api.get("/sessions"),
       ]);
       setCourses(coursesRes.courses || []);
       setSessions(sessionsRes.sessions || []);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load dashboard data.');
+      toast.error("Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
@@ -54,23 +54,23 @@ export default function TeacherDashboard() {
   const handleStartSession = async (e) => {
     e.preventDefault();
     if (!selectedCourseId || !topic.trim()) {
-      toast.error('Please select a course and topic.');
+      toast.error("Please select a course and topic.");
       return;
     }
 
     setCreatingSession(true);
     try {
-      const res = await api.post('/sessions', {
+      const res = await api.post("/sessions", {
         courseId: selectedCourseId,
         topic: topic.trim(),
         room: room.trim() || undefined,
         durationMinutes: Number(duration),
       });
 
-      toast.success('Live session started!');
+      toast.success("Live session started!");
       navigate(`/teacher/live?sessionId=${res.session._id}`);
     } catch (err) {
-      toast.error(err.message || 'Failed to start session.');
+      toast.error(err.message || "Failed to start session.");
     } finally {
       setCreatingSession(false);
     }
@@ -79,10 +79,13 @@ export default function TeacherDashboard() {
   const handleSendReminders = async () => {
     setSendingReminders(true);
     try {
-      const res = await api.post('/notifications/send-low-attendance-reminders', {});
-      toast.success(res.message || 'Low-attendance reminders dispatched!');
+      const res = await api.post(
+        "/notifications/send-low-attendance-reminders",
+        {},
+      );
+      toast.success(res.message || "Low-attendance reminders dispatched!");
     } catch (err) {
-      toast.error(err.message || 'Failed to dispatch reminders.');
+      toast.error(err.message || "Failed to dispatch reminders.");
     } finally {
       setSendingReminders(false);
     }
@@ -98,10 +101,13 @@ export default function TeacherDashboard() {
   }
 
   const activeSessions = sessions.filter(
-    (s) => s.status === 'open' && new Date(s.endTime) > new Date()
+    (s) => s.status === "open" && new Date(s.endTime) > new Date(),
   );
 
-  const totalStudents = courses.reduce((sum, c) => sum + (c.enrolledStudentsCount || 0), 0);
+  const totalStudents = courses.reduce(
+    (sum, c) => sum + (c.enrolledStudentsCount || 0),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -112,7 +118,8 @@ export default function TeacherDashboard() {
             Instructor Portal
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage live class sessions, student rosters, rotating QR projectors & audit logs
+            Manage live class sessions, student rosters, rotating QR projectors
+            & audit logs
           </p>
         </div>
 
@@ -131,46 +138,62 @@ export default function TeacherDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">My Courses</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              My Courses
+            </span>
             <BookOpen className="w-5 h-5 text-brand-500" />
           </div>
           <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">
             {courses.length}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Assigned teaching subjects</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Assigned teaching subjects
+          </p>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">Active Students</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              Active Students
+            </span>
             <Users className="w-5 h-5 text-teal-500" />
           </div>
           <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">
             {totalStudents}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Enrolled across all courses</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Enrolled across all courses
+          </p>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">Live Sessions Now</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              Live Sessions Now
+            </span>
             <Radio className="w-5 h-5 text-emerald-500 animate-pulse" />
           </div>
           <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">
             {activeSessions.length}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Currently open for check-in</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Currently open for check-in
+          </p>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase">Total Sessions Held</span>
+            <span className="text-xs font-bold text-slate-400 uppercase">
+              Total Sessions Held
+            </span>
             <CheckCircle2 className="w-5 h-5 text-indigo-500" />
           </div>
           <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">
             {sessions.length}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Historical lecture sessions</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Historical lecture sessions
+          </p>
         </div>
       </div>
 
@@ -203,7 +226,11 @@ export default function TeacherDashboard() {
                     {s.topic}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    PIN: <strong className="font-mono text-brand-600">{s.code}</strong> &bull; Room: {s.room}
+                    PIN:{" "}
+                    <strong className="font-mono text-brand-600">
+                      {s.code}
+                    </strong>{" "}
+                    &bull; Room: {s.room}
                   </p>
                 </div>
 
@@ -251,14 +278,15 @@ export default function TeacherDashboard() {
                     {c.code}
                   </span>
                   <span className="text-xs font-bold text-slate-500">
-                    Sec {c.section || 'A'}
+                    Sec {c.section || "A"}
                   </span>
                 </div>
                 <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">
                   {c.name}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {c.enrolledStudentsCount || 0} students enrolled &bull; {c.totalSessionsConducted || 0} sessions held
+                  {c.enrolledStudentsCount || 0} students enrolled &bull;{" "}
+                  {c.totalSessionsConducted || 0} sessions held
                 </p>
               </div>
 
@@ -267,7 +295,7 @@ export default function TeacherDashboard() {
                   onClick={() => {
                     setSelectedCourseId(c._id);
                     setTopic(`Session ${c.totalSessionsConducted + 1}`);
-                    setRoom(c.roomDefault || 'LH-101');
+                    setRoom(c.roomDefault || "LH-101");
                     setShowCreateModal(true);
                   }}
                   className="font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
@@ -373,7 +401,7 @@ export default function TeacherDashboard() {
                   disabled={creatingSession}
                   className="flex-1 py-2.5 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-md"
                 >
-                  {creatingSession ? 'Starting...' : 'Launch Projector QR'}
+                  {creatingSession ? "Starting..." : "Launch Projector QR"}
                 </button>
               </div>
             </form>

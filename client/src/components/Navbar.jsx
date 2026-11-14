@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useTheme } from '../context/ThemeContext.jsx';
-import { useNotifications } from '../context/NotificationContext.jsx';
+import React, { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
+import { useNotifications } from "../context/NotificationContext.jsx";
 import {
   Bell,
   Sun,
@@ -15,12 +15,18 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
-} from 'lucide-react';
+} from "lucide-react";
 
 export default function Navbar() {
   const { user, logout, isStudent, isTeacher, isAdmin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  const { notifications, unreadCount, hasLowAttendanceWarning, markAsRead, markAllAsRead } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    hasLowAttendanceWarning,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const notifRef = useRef(null);
@@ -37,21 +43,25 @@ export default function Navbar() {
         setShowProfileMenu(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
-  const roleLabel = isStudent ? 'Student' : isTeacher ? 'Instructor' : 'Administrator';
-  const roleBadgeStyle = isStudent
-    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+  const roleLabel = isStudent
+    ? "Student"
     : isTeacher
-    ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
-    : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+      ? "Instructor"
+      : "Administrator";
+  const roleBadgeStyle = isStudent
+    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+    : isTeacher
+      ? "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20"
+      : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 glass-panel">
@@ -64,7 +74,10 @@ export default function Navbar() {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                Smart<span className="text-brand-600 dark:text-brand-400">Attend</span>
+                Smart
+                <span className="text-brand-600 dark:text-brand-400">
+                  Attend
+                </span>
               </span>
               <span className="px-1.5 py-0.2 text-[10px] font-extrabold tracking-wider bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-md border border-brand-500/20">
                 v2
@@ -80,7 +93,9 @@ export default function Navbar() {
         <div className="flex items-center gap-2.5">
           {/* Role Pill */}
           {user && (
-            <span className={`hidden md:inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full border ${roleBadgeStyle}`}>
+            <span
+              className={`hidden md:inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full border ${roleBadgeStyle}`}
+            >
               {roleLabel}
             </span>
           )}
@@ -91,7 +106,11 @@ export default function Navbar() {
             aria-label="Toggle Theme"
             className="p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
-            {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
+            {isDark ? (
+              <Sun className="w-5 h-5 text-amber-400" />
+            ) : (
+              <Moon className="w-5 h-5 text-slate-600" />
+            )}
           </button>
 
           {/* Notifications Bell Dropdown */}
@@ -106,10 +125,12 @@ export default function Navbar() {
                 {unreadCount > 0 && (
                   <span
                     className={`absolute top-1.5 right-1.5 w-4 h-4 text-[10px] font-extrabold flex items-center justify-center text-white rounded-full ${
-                      hasLowAttendanceWarning ? 'bg-red-600 animate-pulse' : 'bg-brand-600'
+                      hasLowAttendanceWarning
+                        ? "bg-red-600 animate-pulse"
+                        : "bg-brand-600"
                     }`}
                   >
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </button>
@@ -118,7 +139,9 @@ export default function Navbar() {
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 py-3 z-50">
                   <div className="px-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">Notifications</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      Notifications
+                    </span>
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}
@@ -132,18 +155,22 @@ export default function Navbar() {
 
                   <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
                     {notifications.length === 0 ? (
-                      <div className="p-6 text-center text-xs text-slate-400">No notifications yet.</div>
+                      <div className="p-6 text-center text-xs text-slate-400">
+                        No notifications yet.
+                      </div>
                     ) : (
                       notifications.slice(0, 6).map((notif) => (
                         <div
                           key={notif._id}
                           onClick={() => !notif.read && markAsRead(notif._id)}
                           className={`p-3 text-xs transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
-                            !notif.read ? 'bg-brand-50/40 dark:bg-brand-950/20' : ''
+                            !notif.read
+                              ? "bg-brand-50/40 dark:bg-brand-950/20"
+                              : ""
                           }`}
                         >
                           <div className="flex items-start gap-2.5">
-                            {notif.type === 'low_attendance_warning' ? (
+                            {notif.type === "low_attendance_warning" ? (
                               <div className="p-1 rounded-md bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400 shrink-0">
                                 <AlertTriangle className="w-4 h-4" />
                               </div>
@@ -153,7 +180,9 @@ export default function Navbar() {
                               </div>
                             )}
                             <div className="flex-1">
-                              <p className={`font-semibold ${!notif.read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
+                              <p
+                                className={`font-semibold ${!notif.read ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}
+                              >
                                 {notif.title}
                               </p>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
@@ -171,7 +200,7 @@ export default function Navbar() {
 
                   <div className="pt-2 px-4 border-t border-slate-100 dark:border-slate-800 text-center">
                     <Link
-                      to={isStudent ? '/student/notifications' : '/'}
+                      to={isStudent ? "/student/notifications" : "/"}
                       onClick={() => setShowNotifications(false)}
                       className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline"
                     >
@@ -194,7 +223,9 @@ export default function Navbar() {
                   {user.name.charAt(0)}
                 </div>
                 <div className="hidden sm:block text-left text-xs">
-                  <p className="font-bold text-slate-800 dark:text-slate-100 leading-tight">{user.name}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                    {user.name}
+                  </p>
                   <p className="text-[10px] text-slate-400">{user.email}</p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
@@ -203,9 +234,15 @@ export default function Navbar() {
               {showProfileMenu && (
                 <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1.5 z-50 text-xs">
                   <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
-                    <p className="font-bold text-slate-900 dark:text-white">{user.name}</p>
+                    <p className="font-bold text-slate-900 dark:text-white">
+                      {user.name}
+                    </p>
                     <p className="text-slate-400 truncate">{user.email}</p>
-                    {user.rollNo && <p className="text-brand-600 font-mono mt-0.5 font-semibold">Roll: {user.rollNo}</p>}
+                    {user.rollNo && (
+                      <p className="text-brand-600 font-mono mt-0.5 font-semibold">
+                        Roll: {user.rollNo}
+                      </p>
+                    )}
                   </div>
 
                   {isStudent && (

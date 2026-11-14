@@ -1,15 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Download, Printer, Search, Filter, CheckCircle2, Clock, Calendar, RefreshCw } from 'lucide-react';
-import { api } from '../../api/client.js';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import {
+  Download,
+  Printer,
+  Search,
+  Filter,
+  CheckCircle2,
+  Clock,
+  Calendar,
+  RefreshCw,
+} from "lucide-react";
+import { api } from "../../api/client.js";
+import toast from "react-hot-toast";
 
 export default function AttendanceHistory() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState([]);
-  const [selectedCourse, setSelectedCourse] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -18,7 +27,7 @@ export default function AttendanceHistory() {
   useEffect(() => {
     async function loadCourses() {
       try {
-        const res = await api.get('/courses');
+        const res = await api.get("/courses");
         setCourses(res.courses || []);
       } catch (err) {
         console.error(err);
@@ -32,7 +41,7 @@ export default function AttendanceHistory() {
     try {
       const queryParams = new URLSearchParams({
         page: String(page),
-        limit: '15',
+        limit: "15",
         ...(selectedCourse ? { courseId: selectedCourse } : {}),
         ...(selectedStatus ? { status: selectedStatus } : {}),
       });
@@ -42,7 +51,7 @@ export default function AttendanceHistory() {
       setTotalPages(res.pagination?.totalPages || 1);
       setTotalCount(res.pagination?.total || 0);
     } catch (err) {
-      toast.error('Failed to load attendance records.');
+      toast.error("Failed to load attendance records.");
     } finally {
       setLoading(false);
     }
@@ -54,17 +63,17 @@ export default function AttendanceHistory() {
 
   const handleExportCSV = async () => {
     try {
-      const blob = await api.get('/attendance/export-csv');
+      const blob = await api.get("/attendance/export-csv");
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `attendance_history_${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast.success('Attendance records exported to CSV!');
+      toast.success("Attendance records exported to CSV!");
     } catch (err) {
-      toast.error('Failed to export CSV.');
+      toast.error("Failed to export CSV.");
     }
   };
 
@@ -76,9 +85,9 @@ export default function AttendanceHistory() {
   const filteredRecords = records.filter((r) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    const topic = r.session?.topic?.toLowerCase() || '';
-    const code = r.course?.code?.toLowerCase() || '';
-    const name = r.course?.name?.toLowerCase() || '';
+    const topic = r.session?.topic?.toLowerCase() || "";
+    const code = r.course?.code?.toLowerCase() || "";
+    const name = r.course?.name?.toLowerCase() || "";
     return topic.includes(q) || code.includes(q) || name.includes(q);
   });
 
@@ -91,7 +100,8 @@ export default function AttendanceHistory() {
             My Attendance History
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Complete audit trail of all verified check-ins ({totalCount} total records)
+            Complete audit trail of all verified check-ins ({totalCount} total
+            records)
           </p>
         </div>
 
@@ -186,42 +196,54 @@ export default function AttendanceHistory() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {filteredRecords.map((r) => (
-                  <tr key={r._id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
+                  <tr
+                    key={r._id}
+                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors"
+                  >
                     <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: r.course?.color || '#4f46e5' }}
+                          style={{
+                            backgroundColor: r.course?.color || "#4f46e5",
+                          }}
                         />
                         <span>{r.course?.code}</span>
                       </div>
-                      <p className="text-[11px] text-slate-400 font-normal">{r.course?.name}</p>
+                      <p className="text-[11px] text-slate-400 font-normal">
+                        {r.course?.name}
+                      </p>
                     </td>
 
                     <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">
-                      {r.session?.topic || 'Lecture Session'}
+                      {r.session?.topic || "Lecture Session"}
                     </td>
 
                     <td className="px-6 py-4 text-slate-500 font-mono">
-                      {r.session?.room || 'LH-101'}
+                      {r.session?.room || "LH-101"}
                     </td>
 
                     <td className="px-6 py-4 text-slate-500">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <span>{new Date(r.markedAt).toLocaleDateString()}</span>
-                        <span>{new Date(r.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>
+                          {new Date(r.markedAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       </div>
                     </td>
 
                     <td className="px-6 py-4 text-slate-500 uppercase text-[10px] font-mono">
                       <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold">
-                        {r.method === 'manual_code' ? 'PIN Code' : 'QR Scan'}
+                        {r.method === "manual_code" ? "PIN Code" : "QR Scan"}
                       </span>
                     </td>
 
                     <td className="px-6 py-4">
-                      {r.status === 'present' ? (
+                      {r.status === "present" ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-900/60 dark:text-emerald-300 rounded-full">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Present

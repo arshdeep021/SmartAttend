@@ -1,10 +1,18 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, AlertCircle, ArrowUpRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, AlertCircle, ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
-export default function LowAttendanceBanner({ atRiskCourses = [], approachingCourses = [], overallAtRisk = false }) {
-  if (atRiskCourses.length === 0 && approachingCourses.length === 0 && !overallAtRisk) {
+export default function LowAttendanceBanner({
+  atRiskCourses = [],
+  approachingCourses = [],
+  overallAtRisk = false,
+}) {
+  if (
+    atRiskCourses.length === 0 &&
+    approachingCourses.length === 0 &&
+    !overallAtRisk
+  ) {
     return null;
   }
 
@@ -39,7 +47,9 @@ export default function LowAttendanceBanner({ atRiskCourses = [], approachingCou
                 </div>
 
                 <p className="mt-1 text-sm text-red-100 max-w-2xl leading-relaxed">
-                  Your attendance has fallen below university eligibility requirements. Failure to recover attendance will result in debarment from semester examinations.
+                  Your attendance has fallen below university eligibility
+                  requirements. Failure to recover attendance will result in
+                  debarment from semester examinations.
                 </p>
 
                 {/* Course pills with recovery math */}
@@ -49,12 +59,19 @@ export default function LowAttendanceBanner({ atRiskCourses = [], approachingCou
                       key={idx}
                       className="inline-flex items-center gap-2 px-3 py-1.5 bg-black/25 backdrop-blur-md rounded-lg border border-white/20 text-xs sm:text-sm font-medium"
                     >
-                      <span className="font-bold text-white">{c.course?.code || 'Course'}:</span>
+                      <span className="font-bold text-white">
+                        {c.course?.code || "Course"}:
+                      </span>
                       <span className="px-1.5 py-0.5 bg-red-500/80 rounded text-xs font-bold text-white">
                         {c.percentage}%
                       </span>
                       <span className="text-red-200">
-                        Attend next <strong className="text-white underline">{c.classesToRecover}</strong> consecutive class{c.classesToRecover > 1 ? 'es' : ''} to recover
+                        Attend next{" "}
+                        <strong className="text-white underline">
+                          {c.classesToRecover}
+                        </strong>{" "}
+                        consecutive class{c.classesToRecover > 1 ? "es" : ""} to
+                        recover
                       </span>
                     </div>
                   ))}
@@ -85,15 +102,18 @@ export default function LowAttendanceBanner({ atRiskCourses = [], approachingCou
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="text-sm">
-              <span className="font-bold">Approaching Low Attendance Threshold: </span>
-              Your attendance in{' '}
+              <span className="font-bold">
+                Approaching Low Attendance Threshold:{" "}
+              </span>
+              Your attendance in{" "}
               {approachingCourses.map((c, i) => (
                 <span key={i} className="font-semibold underline mr-1">
                   {c.course?.code} ({c.percentage}%)
                 </span>
-              ))}{' '}
-              is hovering close to 75%. You can miss at most{' '}
-              {Math.min(...approachingCourses.map(c => c.classesCanMiss))} more class(es).
+              ))}{" "}
+              is hovering close to 75%. You can miss at most{" "}
+              {Math.min(...approachingCourses.map((c) => c.classesCanMiss))}{" "}
+              more class(es).
             </div>
           </div>
         </motion.div>

@@ -1,22 +1,22 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema(
   {
     role: {
       type: String,
-      enum: ['student', 'teacher', 'admin'],
+      enum: ["student", "teacher", "admin"],
       required: true,
-      default: 'student',
+      default: "student",
     },
     name: {
       type: String,
-      required: [true, 'Name is required'],
+      required: [true, "Name is required"],
       trim: true,
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       trim: true,
@@ -29,23 +29,23 @@ const userSchema = new mongoose.Schema(
     },
     department: {
       type: String,
-      required: [true, 'Department is required'],
+      required: [true, "Department is required"],
       trim: true,
     },
     section: {
       type: String,
       trim: true,
-      default: 'A',
+      default: "A",
     },
     passwordHash: {
       type: String,
-      required: [true, 'Password is required'],
+      required: [true, "Password is required"],
     },
     approved: {
       type: Boolean,
       default: function () {
         // Students & Admins are automatically approved; teachers require Admin approval
-        return this.role !== 'teacher';
+        return this.role !== "teacher";
       },
     },
     isActive: {
@@ -54,7 +54,7 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: '',
+      default: "",
     },
     resetPasswordToken: {
       type: String,
@@ -69,7 +69,7 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Method to verify password
@@ -83,4 +83,4 @@ userSchema.statics.hashPassword = async function (plainPassword) {
   return bcrypt.hash(plainPassword, salt);
 };
 
-export default mongoose.model('User', userSchema);
+export default mongoose.model("User", userSchema);

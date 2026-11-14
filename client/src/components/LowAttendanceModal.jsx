@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle, ShieldAlert, X } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, CheckCircle, ShieldAlert, X } from "lucide-react";
 
-export default function LowAttendanceModal({ atRiskCourses = [], isOpen, onClose }) {
+export default function LowAttendanceModal({
+  atRiskCourses = [],
+  isOpen,
+  onClose,
+}) {
   if (!isOpen || atRiskCourses.length === 0) return null;
 
   return (
@@ -12,7 +16,7 @@ export default function LowAttendanceModal({ atRiskCourses = [], isOpen, onClose
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-red-200 dark:border-red-900/50 overflow-hidden"
         >
           {/* Header Accent Bar */}
@@ -34,7 +38,9 @@ export default function LowAttendanceModal({ atRiskCourses = [], isOpen, onClose
             </div>
 
             <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Your attendance record currently falls below the mandatory <strong>75% attendance threshold</strong>. You are at immediate risk of attendance shortage.
+              Your attendance record currently falls below the mandatory{" "}
+              <strong>75% attendance threshold</strong>. You are at immediate
+              risk of attendance shortage.
             </p>
 
             <div className="mt-4 space-y-2.5 max-h-56 overflow-y-auto pr-1">
@@ -48,14 +54,20 @@ export default function LowAttendanceModal({ atRiskCourses = [], isOpen, onClose
                       {c.course?.code} - {c.course?.name}
                     </h4>
                     <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                      Current Attendance: <strong className="font-extrabold text-red-700 dark:text-red-300">{c.percentage}%</strong> ({c.attended} of {c.totalConducted} classes)
+                      Current Attendance:{" "}
+                      <strong className="font-extrabold text-red-700 dark:text-red-300">
+                        {c.percentage}%
+                      </strong>{" "}
+                      ({c.attended} of {c.totalConducted} classes)
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="inline-block px-2.5 py-1 text-xs font-bold bg-red-600 text-white rounded-lg shadow-sm">
                       +{c.classesToRecover} classes
                     </span>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">needed for 75%</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      needed for 75%
+                    </p>
                   </div>
                 </div>
               ))}
@@ -66,8 +78,7 @@ export default function LowAttendanceModal({ atRiskCourses = [], isOpen, onClose
                 onClick={onClose}
                 className="w-full sm:w-auto px-5 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-2"
               >
-                <CheckCircle className="w-4 h-4" />
-                I Acknowledge & Understand
+                <CheckCircle className="w-4 h-4" />I Acknowledge & Understand
               </button>
             </div>
           </div>

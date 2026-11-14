@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import "dotenv/config";
 
 /**
  * Validates and retrieves the JWT signing secret.
@@ -7,14 +7,18 @@ import 'dotenv/config';
 export function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('CRITICAL CONFIGURATION ERROR: JWT_SECRET environment variable is required in production!');
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "CRITICAL CONFIGURATION ERROR: JWT_SECRET environment variable is required in production!",
+      );
     }
-    return 'smartattend_jwt_super_secret_key_v2_2026_xyz987';
+    return "smartattend_jwt_super_secret_key_v2_2026_xyz987";
   }
 
-  if (process.env.NODE_ENV === 'production' && secret.length < 32) {
-    throw new Error('CRITICAL CONFIGURATION ERROR: JWT_SECRET must be at least 32 characters long in production.');
+  if (process.env.NODE_ENV === "production" && secret.length < 32) {
+    throw new Error(
+      "CRITICAL CONFIGURATION ERROR: JWT_SECRET must be at least 32 characters long in production.",
+    );
   }
 
   return secret;
@@ -27,14 +31,18 @@ export function getJwtSecret() {
 export function getQrSecret() {
   const secret = process.env.QR_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('CRITICAL CONFIGURATION ERROR: QR_SECRET environment variable is required in production!');
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "CRITICAL CONFIGURATION ERROR: QR_SECRET environment variable is required in production!",
+      );
     }
-    return 'smartattend_qr_rotation_secret_key_v2_2026_abc123';
+    return "smartattend_qr_rotation_secret_key_v2_2026_abc123";
   }
 
-  if (process.env.NODE_ENV === 'production' && secret.length < 32) {
-    throw new Error('CRITICAL CONFIGURATION ERROR: QR_SECRET must be at least 32 characters long in production.');
+  if (process.env.NODE_ENV === "production" && secret.length < 32) {
+    throw new Error(
+      "CRITICAL CONFIGURATION ERROR: QR_SECRET must be at least 32 characters long in production.",
+    );
   }
 
   return secret;
@@ -52,5 +60,5 @@ export function getDefaultRotationInterval() {
  * Public client base URL used for links and QR redirects.
  */
 export function getClientUrl() {
-  return (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+  return (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
 }
