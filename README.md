@@ -186,6 +186,3 @@ smartattend-v2/
 ```
 
 ---
-
-## 📄 License & Archival Notice
-- **Legacy v1 (`SmartAttend_Project_new`)**: Deprecated and no longer required. Can be safely archived. All operational, security, and mathematical requirements are implemented in `smartattend-v2`.
