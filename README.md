@@ -4,6 +4,8 @@
 
 Built with **React 18 + Vite, Tailwind CSS, Framer Motion, Node.js 20, Express, MongoDB Atlas (Mongoose), and Web APIs**.
 
+Live App: https://smartattend-qill.onrender.com/
+
 ---
 
 ## 🌟 Key Highlights & Architectural Guarantees
